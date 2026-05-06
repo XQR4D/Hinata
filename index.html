@@ -1,57 +1,102 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hinata Player</title>
-    <link rel="icon" type="image/svg+xml" href="icon.svg">
-    <link rel="alternate icon" type="image/x-icon" href="favicon.ico">
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
-</head>
-<body>
+    <link rel="icon" type="image/svg+xml" href="icon.svg" />
+    <link rel="alternate icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
     <script type="text/javascript">
-        (function(m,e,t,r,i,k,a){
-            m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-            m[i].l=1*new Date();
-            for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-            k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=108282959', 'ym');
+      (function (m, e, t, r, i, k, a) {
+        m[i] =
+          m[i] ||
+          function () {
+            (m[i].a = m[i].a || []).push(arguments);
+          };
+        m[i].l = 1 * new Date();
+        for (var j = 0; j < document.scripts.length; j++) {
+          if (document.scripts[j].src === r) {
+            return;
+          }
+        }
+        ((k = e.createElement(t)),
+          (a = e.getElementsByTagName(t)[0]),
+          (k.async = 1),
+          (k.src = r),
+          a.parentNode.insertBefore(k, a));
+      })(
+        window,
+        document,
+        'script',
+        'https://mc.yandex.ru/metrika/tag.js?id=108282959',
+        'ym'
+      );
 
-        ym(108282959, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+      ym(108282959, 'init', {
+        ssr: true,
+        webvisor: true,
+        clickmap: true,
+        ecommerce: 'dataLayer',
+        referrer: document.referrer,
+        url: location.href,
+        accurateTrackBounce: true,
+        trackLinks: true,
+      });
     </script>
-    <noscript><div><img src="https://mc.yandex.ru/watch/108282959" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-    
-    <header class="main-header" onclick="window.location.href='index.html'">
-    <div class="pixel-logo">
+    <noscript
+      ><div>
+        <img
+          src="https://mc.yandex.ru/watch/108282959"
+          style="position: absolute; left: -9999px"
+          alt=""
+        /></div
+    ></noscript>
+
+    <header class="main-header" onclick="window.location.href = 'index.html'">
+      <div class="pixel-logo">
         <a class="logo-layer">Hinata</a>
-    </div>
-    <div class="logo-sub">ПРОЕКТ СОЗДАН ПРИ ПОДДЕРЖКЕ t.me/bipbupyoutube</div>
+      </div>
+      <div class="logo-sub">ПРОЕКТ СОЗДАН ПРИ ПОДДЕРЖКЕ t.me/bipbupyoutube</div>
     </header>
 
-    <main id="app">
-        </main>
-        
-    <script src="script.js"></script>
-    
-    <footer class="site-footer">
-        <div class="footer-content">
-            <div class="footer-left">
-                <div class="footer-text">© 2024–2026 BIP BUP Media</div>
-            </div>
-            
-            <div class="footer-center">
-                <a href="https://xqr4d.github.io/XQR4D/" target="_blank" class="footer-link">Developer</a>
-            </div>
-            
-            <div class="footer-right">
-                <a href="https://xqr4d.github.io/shortlink/" target="_blank" class="footer-link">💖 Created via shortlink</a>
-            </div>
-        </div>
-    </footer>
+    <main id="app"></main>
 
-</body>
+    <script src="script.js"></script>
+
+    <footer class="site-footer">
+      <div class="footer-content">
+        <div class="footer-left">
+          <div class="footer-text">© 2024–2026 BIP BUP Media</div>
+        </div>
+
+        <div class="footer-center">
+          <a
+            href="https://xqr4d.github.io/XQR4D/"
+            target="_blank"
+            class="footer-link"
+            >Developer</a
+          >
+        </div>
+
+        <div class="footer-right">
+          <a
+            href="https://xqr4d.github.io/shortlink/"
+            target="_blank"
+            class="footer-link"
+            >💖 Created via shortlink</a
+          >
+        </div>
+      </div>
+    </footer>
+  </body>
 </html>
