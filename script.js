@@ -3,17 +3,61 @@ const GITHUB_REPO = 'Hinata';
 
 const app = document.getElementById('app');
 
-function slug(str) {
-  return str
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+const ID_MAP_KEY = 'hinata_id_map';
+const ID_RMAP_KEY = 'hinata_rmap';
+
+function loadMap() {
+  try {
+    return {
+      map: JSON.parse(localStorage.getItem(ID_MAP_KEY) || '{}'),
+      rmap: JSON.parse(localStorage.getItem(ID_RMAP_KEY) || '{}'),
+    };
+  } catch {
+    return { map: {}, rmap: {} };
+  }
+}
+
+function saveMap(map, rmap) {
+  localStorage.setItem(ID_MAP_KEY, JSON.stringify(map));
+  localStorage.setItem(ID_RMAP_KEY, JSON.stringify(rmap));
+}
+
+function generateId() {
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let id = '';
+  for (let i = 0; i < 8; i++)
+    id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+}
+
+function getOrCreateId(tag, file, title) {
+  const { map, rmap } = loadMap();
+  const key = `${tag}|${file}`;
+
+  if (rmap[key]) return rmap[key];
+
+  let id;
+  do {
+    id = generateId();
+  } while (map[id]);
+
+  map[id] = { tag, file, title };
+  rmap[key] = id;
+  saveMap(map, rmap);
+  return id;
+}
+
+function resolveId(id) {
+  const { map } = loadMap();
+  return map[id] || null;
+}
+
+function buildVideoUrl(tag, file) {
+  return `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(file)}`;
 }
 
 function renderThumbnail(card, thumbUrl) {
-  const container = card.querySelector('.thumbnail-container');
   const img = card.querySelector('.thumbnail');
   const loading = card.querySelector('.thumbnail-loading');
 
@@ -31,10 +75,7 @@ function renderThumbnail(card, thumbUrl) {
 }
 
 async function renderGallery() {
-  app.innerHTML = `
-        <div class="video-grid" id="grid">Загрузка библиотеки видео...</div>
-    `;
-
+  app.innerHTML = `<div class="video-grid" id="grid">Загрузка библиотеки видео...</div>`;
   const grid = document.getElementById('grid');
 
   try {
@@ -51,40 +92,44 @@ async function renderGallery() {
     });
 
     grid.innerHTML = '';
-
     let hasVideos = false;
 
     releases.forEach((release) => {
       release.assets.forEach((asset) => {
         if (asset.name.match(/\.(mp4|mov|webm)$/i)) {
           hasVideos = true;
-          const videoUrl = asset.browser_download_url;
 
           const thumbAsset = release.assets.find(
             (a) => a.name === 'maxresdefault.jpg'
           );
           const thumbUrl = thumbAsset ? thumbAsset.browser_download_url : null;
+          const releaseTitle = release.name || release.tag_name || 'Видео';
+
+          const shortId = getOrCreateId(
+            release.tag_name,
+            asset.name,
+            releaseTitle
+          );
 
           const card = document.createElement('div');
           card.className = 'glass video-card';
-          card.dataset.videoUrl = videoUrl;
 
           card.innerHTML = `
-                        <div class="thumbnail-container">
-                            <div class="thumbnail-loading">ЗАГРУЗКА ОБЛОЖКИ...</div>
-                            <img class="thumbnail" src="" alt="${asset.name}">
-                        </div>
-                        <div style="padding: 15px">
-                            <p style="margin:0; font-size: 10px;">${release.name || release.tag_name}</p>
-                        </div>
-                    `;
+            <div class="thumbnail-container">
+              <div class="thumbnail-loading">ЗАГРУЗКА ОБЛОЖКИ...</div>
+              <img class="thumbnail" src="" alt="${asset.name}">
+            </div>
+            <div style="padding: 15px">
+              <p style="margin:0; font-size: 10px;">${releaseTitle}</p>
+            </div>
+          `;
 
           renderThumbnail(card, thumbUrl);
 
           card.addEventListener('click', () => {
-            const releaseTitle = release.name || release.tag_name || 'Видео';
-            window.location.search = `?v=${encodeURIComponent(videoUrl)}&n=${encodeURIComponent(asset.name)}&t=${encodeURIComponent(releaseTitle)}`;
+            window.location.search = `?v=${shortId}`;
           });
+          card.dataset.shortId = shortId;
 
           grid.appendChild(card);
         }
@@ -100,33 +145,30 @@ async function renderGallery() {
   }
 }
 
-function renderPlayer(videoUrl, releaseName, fileName) {
-  const params = new URLSearchParams(window.location.search);
+function renderPlayer(videoUrl, releaseName, fileName, shortId) {
   const baseUrl =
     window.location.origin + window.location.pathname.replace('index.html', '');
-  const embedUrl = `${baseUrl}embed.html?v=${encodeURIComponent(videoUrl)}`;
-
+  const embedParam = shortId || encodeURIComponent(videoUrl);
+  const embedUrl = `${baseUrl}embed.html?v=${embedParam}`;
   const embedCode = `<iframe src="${embedUrl}" width="800" height="500" frameborder="0" allowfullscreen style="border-radius:12px; overflow:hidden; border:none;"></iframe>`;
 
   app.innerHTML = `
     <div class="player-container">
-        <div class="glass">
-            <video id="v" controls autoplay preload="metadata">
-                <source src="${videoUrl}" type="video/mp4">
-            </video>
-            
-            <div style="padding: 20px 0 10px 0;">
-                <p style="margin:0; font-size: 0.95rem; word-break: break-all; text-align:center">
-                    ${releaseName || 'Без названия'}
-                </p>
-            </div>
-
-            <div class="controls">
-                <button class="btn" id="copyLinkBtn">ССЫЛКА</button>
-                <a href="${videoUrl}" target="_blank" class="btn" style="text-decoration:none">СКАЧАТЬ</a>
-                <button class="btn" id="copyEmbedBtn">&lt;/&gt; EMBED</button>
-            </div>
-        </div>        
+      <div class="glass">
+        <video id="v" controls autoplay preload="metadata">
+          <source src="${videoUrl}" type="video/mp4">
+        </video>
+        <div style="padding: 20px 0 10px 0;">
+          <p style="margin:0; font-size: 0.95rem; word-break: break-all; text-align:center">
+            ${releaseName || 'Без названия'}
+          </p>
+        </div>
+        <div class="controls">
+          <button class="btn" id="copyLinkBtn">ССЫЛКА</button>
+          <a href="${videoUrl}" target="_blank" class="btn" style="text-decoration:none">СКАЧАТЬ</a>
+          <button class="btn" id="copyEmbedBtn">&lt;/&gt; EMBED</button>
+        </div>
+      </div>
     </div>`;
 
   const video = document.getElementById('v');
@@ -147,13 +189,54 @@ function renderPlayer(videoUrl, releaseName, fileName) {
 
 async function init() {
   const params = new URLSearchParams(window.location.search);
-  const videoUrl = params.get('v');
+  const shortId = params.get('v');
 
-  if (videoUrl) {
-    const fileName = params.get('n') || 'Video';
-    const title = params.get('t') || fileName;
+  if (shortId) {
+    const entry = resolveId(shortId);
 
-    renderPlayer(videoUrl, title, fileName);
+    if (entry) {
+      const videoUrl = buildVideoUrl(entry.tag, entry.file);
+      renderPlayer(videoUrl, entry.title, entry.file, shortId);
+    } else {
+      app.innerHTML = `<div style="text-align:center;padding:60px;color:var(--accent-primary)">Загрузка...</div>`;
+      try {
+        const response = await fetch(
+          `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/releases`
+        );
+        if (!response.ok) throw new Error('GitHub API error');
+        const releases = await response.json();
+
+        let found = null;
+        releases.forEach((release) => {
+          release.assets.forEach((asset) => {
+            if (asset.name.match(/\.(mp4|mov|webm)$/i)) {
+              const releaseTitle = release.name || release.tag_name || 'Видео';
+              const id = getOrCreateId(
+                release.tag_name,
+                asset.name,
+                releaseTitle
+              );
+              if (id === shortId) {
+                found = {
+                  tag: release.tag_name,
+                  file: asset.name,
+                  title: releaseTitle,
+                };
+              }
+            }
+          });
+        });
+
+        if (found) {
+          const videoUrl = buildVideoUrl(found.tag, found.file);
+          renderPlayer(videoUrl, found.title, found.file, shortId);
+        } else {
+          app.innerHTML = `<div style="text-align:center;padding:60px;color:var(--accent-primary)">Видео не найдено.<br><a href="index.html" style="color:inherit">← Вернуться</a></div>`;
+        }
+      } catch (e) {
+        app.innerHTML = `<div style="text-align:center;padding:60px;color:var(--accent-primary)">Ошибка загрузки.<br>${e.message}</div>`;
+      }
+    }
   } else {
     renderGallery();
   }
