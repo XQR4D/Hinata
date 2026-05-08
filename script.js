@@ -5,11 +5,15 @@ const app = document.getElementById('app');
 
 async function makeId(tag, file) {
   const str = `${tag}|${file}`;
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const buf = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(str)
+  );
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   return Array.from(new Uint8Array(buf))
     .slice(0, 8)
-    .map(b => chars[b % chars.length])
+    .map((b) => chars[b % chars.length])
     .join('');
 }
 
@@ -83,7 +87,9 @@ async function renderGallery() {
         if (asset.name.match(/\.(mp4|mov|webm)$/i)) {
           hasVideos = true;
 
-          const thumbAsset = release.assets.find((a) => a.name === 'maxresdefault.jpg');
+          const thumbAsset = release.assets.find(
+            (a) => a.name === 'maxresdefault.jpg'
+          );
           const thumbUrl = thumbAsset ? thumbAsset.browser_download_url : null;
           const releaseTitle = release.name || release.tag_name || 'Видео';
           const shortId = await makeId(release.tag_name, asset.name);
@@ -121,7 +127,8 @@ async function renderGallery() {
 }
 
 function renderPlayer(videoUrl, releaseName, fileName, shortId) {
-  const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+  const baseUrl =
+    window.location.origin + window.location.pathname.replace('index.html', '');
   const embedParam = shortId || encodeURIComponent(videoUrl);
   const embedUrl = `${baseUrl}embed.html?v=${embedParam}`;
   const embedCode = `<iframe src="${embedUrl}" width="800" height="500" frameborder="0" allowfullscreen style="border-radius:12px; overflow:hidden; border:none;"></iframe>`;
@@ -149,11 +156,15 @@ function renderPlayer(videoUrl, releaseName, fileName, shortId) {
   if (video) video.volume = 0.2;
 
   document.getElementById('copyLinkBtn').onclick = () => {
-    navigator.clipboard.writeText(window.location.href).then(() => alert('Ссылка скопирована'));
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => alert('Ссылка скопирована'));
   };
 
   document.getElementById('copyEmbedBtn').onclick = () => {
-    navigator.clipboard.writeText(embedCode).then(() => alert('Код embed скопирован'));
+    navigator.clipboard
+      .writeText(embedCode)
+      .then(() => alert('Код embed скопирован'));
   };
 }
 

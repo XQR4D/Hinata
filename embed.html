@@ -18,9 +18,12 @@
         --text: #ffffff;
       }
 
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+      }
 
-      body, html {
+      body,
+      html {
         margin: 0;
         padding: 0;
         width: 100%;
@@ -86,7 +89,8 @@
         height: 0;
         border-style: solid;
         border-width: 14px 0 14px 24px;
-        border-color: transparent transparent transparent var(--accent-secondary);
+        border-color: transparent transparent transparent
+          var(--accent-secondary);
         margin-left: 6px;
       }
 
@@ -101,7 +105,9 @@
         border-color: transparent transparent transparent #000;
       }
 
-      .hidden { display: none !important; }
+      .hidden {
+        display: none !important;
+      }
 
       .ended-message {
         position: absolute;
@@ -129,7 +135,9 @@
         <div class="play-overlay" id="playBtn"></div>
         <div class="ended-message" id="endedMessage">
           ВИДЕО ЗАВЕРШЕНО<br />
-          <span style="font-size: 10px; color: var(--accent-secondary)">НАЖМИТЕ ДЛЯ ПОВТОРА</span>
+          <span style="font-size: 10px; color: var(--accent-secondary)"
+            >НАЖМИТЕ ДЛЯ ПОВТОРА</span
+          >
         </div>
       </div>
     </div>
@@ -140,11 +148,15 @@
 
       async function makeId(tag, file) {
         const str = `${tag}|${file}`;
-        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        const buf = await crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode(str)
+        );
+        const chars =
+          'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         return Array.from(new Uint8Array(buf))
           .slice(0, 8)
-          .map(b => chars[b % chars.length])
+          .map((b) => chars[b % chars.length])
           .join('');
       }
 
