@@ -3,54 +3,38 @@ const GITHUB_REPO = 'Hinata';
 
 const app = document.getElementById('app');
 
-const ID_MAP_KEY = 'hinata_id_map';
-const ID_RMAP_KEY = 'hinata_rmap';
+async function makeId(tag, file) {
+  const str = `${tag}|${file}`;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  return Array.from(new Uint8Array(buf))
+    .slice(0, 8)
+    .map(b => chars[b % chars.length])
+    .join('');
+}
 
-function loadMap() {
-  try {
-    return {
-      map: JSON.parse(localStorage.getItem(ID_MAP_KEY) || '{}'),
-      rmap: JSON.parse(localStorage.getItem(ID_RMAP_KEY) || '{}'),
-    };
-  } catch {
-    return { map: {}, rmap: {} };
+async function resolveId(shortId) {
+  const response = await fetch(
+    `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/releases`
+  );
+  if (!response.ok) throw new Error('GitHub API error');
+  const releases = await response.json();
+
+  for (const release of releases) {
+    for (const asset of release.assets) {
+      if (asset.name.match(/\.(mp4|mov|webm)$/i)) {
+        const id = await makeId(release.tag_name, asset.name);
+        if (id === shortId) {
+          return {
+            tag: release.tag_name,
+            file: asset.name,
+            title: release.name || release.tag_name || 'Видео',
+          };
+        }
+      }
+    }
   }
-}
-
-function saveMap(map, rmap) {
-  localStorage.setItem(ID_MAP_KEY, JSON.stringify(map));
-  localStorage.setItem(ID_RMAP_KEY, JSON.stringify(rmap));
-}
-
-function generateId() {
-  const chars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let id = '';
-  for (let i = 0; i < 8; i++)
-    id += chars[Math.floor(Math.random() * chars.length)];
-  return id;
-}
-
-function getOrCreateId(tag, file, title) {
-  const { map, rmap } = loadMap();
-  const key = `${tag}|${file}`;
-
-  if (rmap[key]) return rmap[key];
-
-  let id;
-  do {
-    id = generateId();
-  } while (map[id]);
-
-  map[id] = { tag, file, title };
-  rmap[key] = id;
-  saveMap(map, rmap);
-  return id;
-}
-
-function resolveId(id) {
-  const { map } = loadMap();
-  return map[id] || null;
+  return null;
 }
 
 function buildVideoUrl(tag, file) {
@@ -94,26 +78,18 @@ async function renderGallery() {
     grid.innerHTML = '';
     let hasVideos = false;
 
-    releases.forEach((release) => {
-      release.assets.forEach((asset) => {
+    for (const release of releases) {
+      for (const asset of release.assets) {
         if (asset.name.match(/\.(mp4|mov|webm)$/i)) {
           hasVideos = true;
 
-          const thumbAsset = release.assets.find(
-            (a) => a.name === 'maxresdefault.jpg'
-          );
+          const thumbAsset = release.assets.find((a) => a.name === 'maxresdefault.jpg');
           const thumbUrl = thumbAsset ? thumbAsset.browser_download_url : null;
           const releaseTitle = release.name || release.tag_name || 'Видео';
-
-          const shortId = getOrCreateId(
-            release.tag_name,
-            asset.name,
-            releaseTitle
-          );
+          const shortId = await makeId(release.tag_name, asset.name);
 
           const card = document.createElement('div');
           card.className = 'glass video-card';
-
           card.innerHTML = `
             <div class="thumbnail-container">
               <div class="thumbnail-loading">ЗАГРУЗКА ОБЛОЖКИ...</div>
@@ -129,12 +105,11 @@ async function renderGallery() {
           card.addEventListener('click', () => {
             window.location.search = `?v=${shortId}`;
           });
-          card.dataset.shortId = shortId;
 
           grid.appendChild(card);
         }
-      });
-    });
+      }
+    }
 
     if (!hasVideos) {
       grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-muted);">В релизах пока нет видеофайлов.</div>`;
@@ -146,8 +121,7 @@ async function renderGallery() {
 }
 
 function renderPlayer(videoUrl, releaseName, fileName, shortId) {
-  const baseUrl =
-    window.location.origin + window.location.pathname.replace('index.html', '');
+  const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
   const embedParam = shortId || encodeURIComponent(videoUrl);
   const embedUrl = `${baseUrl}embed.html?v=${embedParam}`;
   const embedCode = `<iframe src="${embedUrl}" width="800" height="500" frameborder="0" allowfullscreen style="border-radius:12px; overflow:hidden; border:none;"></iframe>`;
@@ -175,61 +149,30 @@ function renderPlayer(videoUrl, releaseName, fileName, shortId) {
   if (video) video.volume = 0.2;
 
   document.getElementById('copyLinkBtn').onclick = () => {
-    navigator.clipboard
-      .writeText(window.location.href)
-      .then(() => alert('Ссылка скопирована'));
+    navigator.clipboard.writeText(window.location.href).then(() => alert('Ссылка скопирована'));
   };
 
   document.getElementById('copyEmbedBtn').onclick = () => {
-    navigator.clipboard
-      .writeText(embedCode)
-      .then(() => alert('Код embed скопирован'));
+    navigator.clipboard.writeText(embedCode).then(() => alert('Код embed скопирован'));
   };
 }
 
 async function init() {
   const params = new URLSearchParams(window.location.search);
-  const shortId = params.get('v');
+  const v = params.get('v');
 
-  if (shortId) {
-    const entry = resolveId(shortId);
-
-    if (entry) {
-      const videoUrl = buildVideoUrl(entry.tag, entry.file);
-      renderPlayer(videoUrl, entry.title, entry.file, shortId);
+  if (v) {
+    if (v.startsWith('http')) {
+      const fileName = params.get('n') || 'Video';
+      const title = params.get('t') || fileName;
+      renderPlayer(v, title, fileName, null);
     } else {
       app.innerHTML = `<div style="text-align:center;padding:60px;color:var(--accent-primary)">Загрузка...</div>`;
       try {
-        const response = await fetch(
-          `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/releases`
-        );
-        if (!response.ok) throw new Error('GitHub API error');
-        const releases = await response.json();
-
-        let found = null;
-        releases.forEach((release) => {
-          release.assets.forEach((asset) => {
-            if (asset.name.match(/\.(mp4|mov|webm)$/i)) {
-              const releaseTitle = release.name || release.tag_name || 'Видео';
-              const id = getOrCreateId(
-                release.tag_name,
-                asset.name,
-                releaseTitle
-              );
-              if (id === shortId) {
-                found = {
-                  tag: release.tag_name,
-                  file: asset.name,
-                  title: releaseTitle,
-                };
-              }
-            }
-          });
-        });
-
-        if (found) {
-          const videoUrl = buildVideoUrl(found.tag, found.file);
-          renderPlayer(videoUrl, found.title, found.file, shortId);
+        const entry = await resolveId(v);
+        if (entry) {
+          const videoUrl = buildVideoUrl(entry.tag, entry.file);
+          renderPlayer(videoUrl, entry.title, entry.file, v);
         } else {
           app.innerHTML = `<div style="text-align:center;padding:60px;color:var(--accent-primary)">Видео не найдено.<br><a href="index.html" style="color:inherit">← Вернуться</a></div>`;
         }
