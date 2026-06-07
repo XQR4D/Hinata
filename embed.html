@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HINATA EMB</title>
+    <title>HINATA</title>
     <link rel="icon" type="image/svg+xml" href="icon.svg" />
     <link rel="alternate icon" type="image/x-icon" href="favicon.ico" />
     <link
@@ -119,6 +119,33 @@
         display: none !important;
       }
 
+      .thumb-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 15;
+        background: #000;
+        pointer-events: none;
+        transition: opacity 0.2s linear;
+      }
+
+      .thumb-overlay img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        opacity: 0;
+        transition: opacity 0.25s linear;
+      }
+
+      .thumb-overlay img.loaded {
+        opacity: 1;
+      }
+
+      .thumb-overlay.hide {
+        opacity: 0;
+        pointer-events: none;
+      }
+
       .ended-message {
         position: absolute;
         top: 50%;
@@ -142,6 +169,9 @@
         <video id="v" preload="metadata" playsinline>
           <source id="videoSource" src="" type="video/mp4" />
         </video>
+        <div class="thumb-overlay" id="thumbOverlay">
+          <img id="thumbImg" alt="" />
+        </div>
         <div class="hinata-tag">HINATA</div>
         <div class="play-overlay" id="playBtn"></div>
         <div class="ended-message" id="endedMessage">
@@ -198,8 +228,15 @@
           for (const asset of release.assets) {
             if (asset.name.match(/\.(mp4|mov|webm)$/i)) {
               const id = await makeId(release.tag_name, asset.name);
-              if (id === shortId)
-                return `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/download/${encodeURIComponent(release.tag_name)}/${encodeURIComponent(asset.name)}`;
+              if (id === shortId) {
+                const thumbAsset = release.assets.find(
+                  (a) => a.name === 'maxresdefault.jpg'
+                );
+                return {
+                  url: `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/download/${encodeURIComponent(release.tag_name)}/${encodeURIComponent(asset.name)}`,
+                  thumbUrl: thumbAsset ? thumbAsset.browser_download_url : null,
+                };
+              }
             }
           }
         }
@@ -214,6 +251,18 @@
       const fill = document.getElementById('progressFill');
       const dot = document.getElementById('progressDot');
       const wrap = document.getElementById('progressWrap');
+      const thumbOverlay = document.getElementById('thumbOverlay');
+      const thumbImg = document.getElementById('thumbImg');
+
+      function showThumb(url) {
+        if (!url) return;
+        thumbImg.src = url;
+        thumbImg.onload = () => thumbImg.classList.add('loaded');
+      }
+
+      function hideThumb() {
+        thumbOverlay.classList.add('hide');
+      }
 
       video.volume = 0.2;
 
@@ -261,6 +310,7 @@
 
       video.addEventListener('play', () => {
         playBtn.classList.add('hidden');
+        hideThumb();
       });
 
       async function init() {
@@ -271,8 +321,11 @@
           startPlayer(decodeURIComponent(v));
         } else {
           try {
-            const url = await resolveId(v);
-            if (url) startPlayer(url);
+            const entry = await resolveId(v);
+            if (entry) {
+              showThumb(entry.thumbUrl);
+              startPlayer(entry.url);
+            }
           } catch (e) {
             console.error(e);
           }
