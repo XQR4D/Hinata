@@ -1,13 +1,14 @@
 :root {
-  --bg: #000000;
-  --surface: #0d0d0d;
-  --surface2: #141414;
-  --border-heavy: #000000;
+  --bg: #060807;
+  --surface: rgba(15, 20, 17, 0.78);
+  --surface2: rgba(20, 27, 23, 0.9);
+  --border-heavy: rgba(175, 255, 185, 0.16);
   --accent-primary: #15ff00;
   --accent-secondary: #ffffff;
   --text: #ffffff;
-  --text-muted: #555555;
-  --card-border: #1f1f1f;
+  --text-muted: #718077;
+  --card-border: rgba(175, 255, 185, 0.14);
+  --glass-line: rgba(220, 255, 225, 0.12);
 }
 
 * {
@@ -16,8 +17,12 @@
 
 body {
   background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(120, 255, 140, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 255, 140, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
   color: var(--text);
-  font-family: 'Days One', sans-serif;
+  font-family: "Days One", sans-serif;
   line-height: 1.5;
   font-size: 15px;
   margin: 0;
@@ -27,8 +32,8 @@ body {
 }
 
 .main-header {
-  background: var(--bg);
-  border-bottom: 1px solid #1a1a1a;
+  background: rgba(6, 8, 7, 0.78);
+  border-bottom: 1px solid var(--glass-line);
   padding: 18px 2rem;
   display: flex;
   align-items: center;
@@ -37,6 +42,8 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .pixel-logo {
@@ -52,7 +59,8 @@ body {
   transition: color 0.15s;
 }
 
-.logo-layer:hover {
+.logo-layer:hover,
+.logo-layer-tg:hover {
   color: var(--accent-primary);
 }
 
@@ -60,10 +68,6 @@ body {
   cursor: pointer;
   transition: color 0.15s;
   font-size: 12px;
-}
-
-.logo-layer-tg:hover {
-  color: var(--accent-primary);
 }
 
 .logo-sub {
@@ -83,12 +87,12 @@ body {
   padding: 0;
   max-width: 100%;
   margin: 0;
-  background: #111;
+  background: rgba(10, 14, 12, 0.5);
 }
 
 .glass {
   background: var(--surface);
-  border: none;
+  border: 1px solid var(--card-border);
   overflow: hidden;
   box-shadow: none;
   transition: none;
@@ -97,7 +101,7 @@ body {
 .glass:hover {
   transform: none;
   box-shadow: none;
-  border-color: transparent;
+  border-color: var(--card-border);
 }
 
 .video-card {
@@ -105,13 +109,33 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
-  background: var(--surface);
-  border: none;
-  transition: background 0.15s;
+  background: rgba(13, 18, 15, 0.72);
+  border: 1px solid transparent;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.video-card:hover {
+  background: rgba(24, 34, 27, 0.84);
+  border-color: var(--card-border);
+}
+
+.thumbnail-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: rgba(5, 8, 6, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .video-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -129,7 +153,8 @@ body {
 }
 
 .video-card:hover {
-  background: #141414;
+  background: rgba(24, 34, 27, 0.84);
+  border-color: var(--card-border);
 }
 
 .thumbnail-container {
@@ -137,14 +162,14 @@ body {
   width: 100%;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: #0a0a0a;
+  background: rgba(5, 8, 6, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .thumbnail-container::after {
-  content: 'HINATA';
+  content: "HINATA";
   position: absolute;
   top: 8px;
   left: 8px;
@@ -225,8 +250,11 @@ body {
 
 .player-glass {
   background: var(--surface);
-  border: 1px solid #1a1a1a;
+  border: 1px solid var(--glass-line);
   overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .player-glass video,
@@ -271,14 +299,207 @@ video {
   box-shadow: 0 0 0 1px var(--accent-primary);
 }
 
+.video-controls {
+  min-height: 42px;
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(8, 13, 10, 0.72);
+  border-top: 1px solid var(--glass-line);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.video-control-button {
+  min-width: 34px;
+  height: 28px;
+  padding: 0 8px;
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  color: var(--accent-primary);
+  font-family: "Days One", sans-serif;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.video-control-button:hover,
+.video-control-button:focus-visible {
+  border-color: var(--accent-primary);
+  outline: none;
+}
+
+.video-time {
+  min-width: 76px;
+  color: #aaa;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  color: #777;
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+
+.volume-control input {
+  width: 90px;
+  height: 3px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.fullscreen-button {
+  min-width: 48px;
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+
 .player-bottom {
   padding: 14px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-top: 1px solid #1a1a1a;
+  background: rgba(8, 13, 10, 0.72);
+  border-top: 1px solid var(--glass-line);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   flex-wrap: wrap;
+}
+
+.engagement {
+  background: rgba(8, 13, 10, 0.72);
+  border: 1px solid var(--glass-line);
+  border-top: 0;
+  padding: 16px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.engagement-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat,
+.vote-button {
+  color: #aaa;
+  font-family: "Days One", sans-serif;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.stat {
+  margin-right: auto;
+}
+
+.stat strong,
+.vote-button strong {
+  color: var(--accent-primary);
+}
+
+.vote-button {
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.vote-button:hover,
+.vote-button:disabled {
+  border-color: var(--accent-primary);
+  color: #fff;
+}
+
+.engagement-status {
+  min-height: 16px;
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 8px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.comments {
+  margin-top: 12px;
+  padding-top: 18px;
+}
+
+.comments h2 {
+  color: #ddd;
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin: 0 0 14px;
+}
+
+.comment-form {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 180px 1fr auto;
+  margin-bottom: 18px;
+}
+
+.comment-form input,
+.comment-form textarea {
+  background: #080808;
+  background: rgba(5, 9, 7, 0.7);
+  border: 1px solid var(--glass-line);
+  font-family: "Days One", sans-serif;
+  font-size: 9px;
+  letter-spacing: 1px;
+  outline: none;
+  padding: 9px 10px;
+  resize: vertical;
+}
+
+.comment-form input:focus,
+.comment-form textarea:focus {
+  border-color: var(--accent-primary);
+}
+
+.comments-list {
+  display: grid;
+  gap: 1px;
+}
+
+.comment,
+.comments-empty {
+  background: rgba(7, 12, 9, 0.58);
+  border: 1px solid rgba(175, 255, 185, 0.08);
+  border-left: 2px solid rgba(21, 255, 0, 0.45);
+  padding: 12px;
+}
+
+.comment-author {
+  color: var(--accent-primary);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.comment-text {
+  color: #ccc;
+  font-family: sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 7px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comments-empty {
+  color: var(--text-muted);
+  font-size: 8px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .player-title-block .player-title {
@@ -306,7 +527,7 @@ video {
 }
 
 .btn {
-  font-family: 'Days One', sans-serif;
+  font-family: "Days One", sans-serif;
   background: transparent;
   border: 1px solid #2a2a2a;
   color: #aaa;
@@ -439,7 +660,7 @@ video {
   background: #0d0d0d;
   border: 1px solid #222;
   color: var(--text);
-  font-family: 'Days One', sans-serif;
+  font-family: "Days One", sans-serif;
   font-size: 12px;
   outline: none;
 }
@@ -467,6 +688,22 @@ video {
   .player-bottom {
     flex-direction: column;
     align-items: flex-start;
+  }
+  .video-controls {
+    gap: 6px;
+  }
+  .volume-control {
+    margin-left: auto;
+  }
+  .volume-control input {
+    width: 62px;
+  }
+  .stat {
+    flex-basis: 100%;
+    margin-right: 0;
+  }
+  .comment-form {
+    grid-template-columns: 1fr;
   }
   .footer-content {
     flex-direction: column;

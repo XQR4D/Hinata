@@ -2,6 +2,133 @@ const GITHUB_USER = 'xqr4d';
 const GITHUB_REPO = 'Hinata';
 
 const app = document.getElementById('app');
+let firebaseDb = null;
+let firebaseUser = null;
+
+function initFirebase() {
+  const config = window.HINATA_FIREBASE_CONFIG;
+  if (!window.firebase || !config || !config.apiKey || config.apiKey.startsWith('PASTE_')) return Promise.resolve(false);
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(config);
+    firebaseDb = firebase.firestore();
+    return firebase.auth().signInAnonymously().then((credential) => {
+      firebaseUser = credential.user;
+      return true;
+    }).catch((error) => {
+      console.error('Firebase auth error:', error);
+      return false;
+    });
+  } catch (error) {
+    console.error('Firebase init error:', error);
+    return Promise.resolve(false);
+  }
+}
+
+function formatCount(value) {
+  return new Intl.NumberFormat('ru-RU').format(value || 0);
+}
+
+function setEngagementMessage(message) {
+  const status = document.getElementById('engagementStatus');
+  if (status) status.textContent = message;
+}
+
+function renderComments(snapshot) {
+  const list = document.getElementById('commentsList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (snapshot.empty) {
+    list.innerHTML = '<div class="comments-empty">КОММЕНТАРИЕВ ПОКА НЕТ</div>';
+    return;
+  }
+  snapshot.forEach((doc) => {
+    const comment = doc.data();
+    const item = document.createElement('article');
+    item.className = 'comment';
+    const author = document.createElement('div');
+    author.className = 'comment-author';
+    author.textContent = comment.name || 'АНОНИМ';
+    const text = document.createElement('p');
+    text.className = 'comment-text';
+    text.textContent = comment.text || '';
+    item.append(author, text);
+    list.appendChild(item);
+  });
+}
+
+async function setupEngagement(videoId) {
+  const statsRef = firebaseDb.collection('videos').doc(videoId);
+  const views = document.getElementById('viewsCount');
+  const likes = document.getElementById('likesCount');
+  const dislikes = document.getElementById('dislikesCount');
+  const viewKey = `hinata-viewed-${videoId}`;
+
+  statsRef.onSnapshot((snapshot) => {
+    const stats = snapshot.data() || {};
+    views.textContent = formatCount(stats.views);
+    likes.textContent = formatCount(stats.likes);
+    dislikes.textContent = formatCount(stats.dislikes);
+  }, (error) => {
+    console.error('Firebase stats error:', error);
+    setEngagementMessage('СТАТИСТИКА ВРЕМЕННО НЕДОСТУПНА');
+  });
+
+  if (!localStorage.getItem(viewKey)) {
+    await statsRef.set({ views: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+    localStorage.setItem(viewKey, '1');
+  }
+
+  document.querySelectorAll('[data-vote]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const vote = button.dataset.vote;
+      const voteRef = statsRef.collection('votes').doc(firebaseUser.uid);
+      button.disabled = true;
+      try {
+        await firebaseDb.runTransaction(async (transaction) => {
+          const voteSnapshot = await transaction.get(voteRef);
+          const previousVote = voteSnapshot.exists ? voteSnapshot.data().type : null;
+          if (previousVote === vote) return;
+          const update = {};
+          if (previousVote) update[previousVote === 'like' ? 'likes' : 'dislikes'] = firebase.firestore.FieldValue.increment(-1);
+          update[vote === 'like' ? 'likes' : 'dislikes'] = firebase.firestore.FieldValue.increment(1);
+          transaction.set(statsRef, update, { merge: true });
+          transaction.set(voteRef, { type: vote });
+        });
+      } catch (error) {
+        console.error('Firebase vote error:', error);
+        setEngagementMessage('НЕ УДАЛОСЬ СОХРАНИТЬ ГОЛОС');
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+
+  const commentsRef = statsRef.collection('comments');
+  commentsRef.orderBy('createdAt', 'desc').limit(50).onSnapshot(renderComments, (error) => {
+    console.error('Firebase comments error:', error);
+    setEngagementMessage('КОММЕНТАРИИ ВРЕМЕННО НЕДОСТУПНЫ');
+  });
+
+  document.getElementById('commentForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const nameInput = document.getElementById('commentName');
+    const textInput = document.getElementById('commentText');
+    const submit = event.target.querySelector('button');
+    const name = nameInput.value.trim().slice(0, 40);
+    const text = textInput.value.trim().slice(0, 1000);
+    if (!name || !text) return;
+    submit.disabled = true;
+    try {
+      await commentsRef.add({ name, text, uid: firebaseUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      textInput.value = '';
+    } catch (error) {
+      console.error('Firebase comment error:', error);
+      setEngagementMessage('НЕ УДАЛОСЬ ОПУБЛИКОВАТЬ КОММЕНТАРИЙ');
+    } finally {
+      submit.disabled = false;
+    }
+  });
+}
 
 async function makeId(tag, file) {
   const str = `${tag}|${file}`;
@@ -154,13 +281,23 @@ function renderPlayer(videoUrl, releaseName, releaseDate, shortId) {
   app.innerHTML = `
     <div class="player-container">
       <div class="player-glass">
-        <video id="v" controls autoplay preload="metadata">
+        <video id="v" autoplay preload="metadata" playsinline>
           <source src="${videoUrl}" type="video/mp4">
         </video>
 
         <div class="progress-bar-wrap" id="progressWrap">
           <div class="progress-bar-fill" id="progressFill"></div>
           <div class="progress-bar-dot" id="progressDot"></div>
+        </div>
+
+        <div class="video-controls" aria-label="Управление видео">
+          <button class="video-control-button" id="playPauseBtn" type="button" aria-label="Воспроизвести" title="Воспроизвести">▶</button>
+          <span class="video-time"><span id="currentTime">0:00</span> / <span id="duration">0:00</span></span>
+          <label class="volume-control" title="Громкость">
+            <span id="volumeLevel" aria-hidden="true">VOL 20%</span>
+            <input id="volumeControl" type="range" min="0" max="1" step="0.01" value="0.2" aria-label="Громкость">
+          </label>
+          <button class="video-control-button fullscreen-button" id="fullscreenBtn" type="button" aria-label="Полный экран" title="Полный экран">FULL</button>
         </div>
 
         <div class="player-bottom">
@@ -175,28 +312,128 @@ function renderPlayer(videoUrl, releaseName, releaseDate, shortId) {
           </div>
         </div>
       </div>
+      <section class="engagement" aria-label="Статистика и комментарии">
+        <div class="engagement-stats">
+          <span class="stat"><strong id="viewsCount">0</strong> ПРОСМОТРОВ</span>
+          <button class="vote-button" data-vote="like" type="button">НРАВИТСЯ <strong id="likesCount">0</strong></button>
+          <button class="vote-button" data-vote="dislike" type="button">НЕ НРАВИТСЯ <strong id="dislikesCount">0</strong></button>
+        </div>
+        <div id="engagementStatus" class="engagement-status"></div>
+        <div class="comments">
+          <h2>КОММЕНТАРИИ</h2>
+          <form id="commentForm" class="comment-form">
+            <input id="commentName" maxlength="40" placeholder="ИМЯ" required />
+            <textarea id="commentText" maxlength="1000" rows="3" placeholder="ВАШ КОММЕНТАРИЙ" required></textarea>
+            <button class="btn" type="submit">ОТПРАВИТЬ</button>
+          </form>
+          <div id="commentsList" class="comments-list"><div class="comments-empty">ЗАГРУЗКА КОММЕНТАРИЕВ...</div></div>
+        </div>
+      </section>
     </div>`;
 
   const video = document.getElementById('v');
   const fill = document.getElementById('progressFill');
   const dot = document.getElementById('progressDot');
   const wrap = document.getElementById('progressWrap');
+  const playPauseBtn = document.getElementById('playPauseBtn');
+  const currentTime = document.getElementById('currentTime');
+  const duration = document.getElementById('duration');
+  const volumeControl = document.getElementById('volumeControl');
+  const volumeLevel = document.getElementById('volumeLevel');
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+  const formatTime = (seconds) => {
+    if (!Number.isFinite(seconds)) return '0:00';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${minutes}:${remainingSeconds}`;
+  };
+
+  const updatePlayButton = () => {
+    const isPlaying = !video.paused && !video.ended;
+    playPauseBtn.textContent = isPlaying ? 'Ⅱ' : '▶';
+    playPauseBtn.setAttribute('aria-label', isPlaying ? 'Пауза' : 'Воспроизвести');
+    playPauseBtn.title = isPlaying ? 'Пауза' : 'Воспроизвести';
+  };
+
+  const updateVolume = (value) => {
+    const nextVolume = Math.min(1, Math.max(0, value));
+    video.volume = nextVolume;
+    video.muted = nextVolume === 0;
+    volumeControl.value = nextVolume.toString();
+    volumeLevel.textContent = `VOL ${Math.round(nextVolume * 100)}%`;
+  };
 
   if (video) {
-    video.volume = 0.2;
+    updateVolume(Number(volumeControl.value));
+
+    playPauseBtn.addEventListener('click', () => {
+      if (video.paused) video.play();
+      else video.pause();
+    });
+
+    volumeControl.addEventListener('input', () => {
+      updateVolume(Number(volumeControl.value));
+    });
+
+    fullscreenBtn.addEventListener('click', () => {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.querySelector('.player-glass').requestFullscreen();
+    });
 
     video.addEventListener('timeupdate', () => {
       if (!video.duration) return;
       const pct = (video.currentTime / video.duration) * 100;
       fill.style.width = pct + '%';
       dot.style.left = pct + '%';
+      currentTime.textContent = formatTime(video.currentTime);
     });
+
+    video.addEventListener('loadedmetadata', () => {
+      duration.textContent = formatTime(video.duration);
+    });
+    video.addEventListener('play', updatePlayButton);
+    video.addEventListener('pause', updatePlayButton);
+    video.addEventListener('ended', updatePlayButton);
 
     wrap.addEventListener('click', (e) => {
       if (!video.duration) return;
       const rect = wrap.getBoundingClientRect();
       const pct = (e.clientX - rect.left) / rect.width;
       video.currentTime = pct * video.duration;
+    });
+
+    document.addEventListener('keydown', (event) => {
+      const target = event.target;
+      if (target instanceof HTMLTextAreaElement || target.isContentEditable) return;
+
+      if (event.code === 'Space' || event.code === 'KeyK') {
+        event.preventDefault();
+        if (video.paused) video.play().catch(() => {});
+        else video.pause();
+      } else if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {
+        event.preventDefault();
+        if (!Number.isFinite(video.duration)) return;
+        const change = event.code === 'ArrowLeft' ? -5 : 5;
+        video.currentTime = Math.min(video.duration, Math.max(0, video.currentTime + change));
+      } else if (event.code === 'ArrowUp' || event.code === 'ArrowDown') {
+        event.preventDefault();
+        const currentVolume = video.muted ? 0 : video.volume;
+        const change = event.code === 'ArrowUp' ? 0.1 : -0.1;
+        updateVolume(currentVolume + change);
+      } else if (event.code === 'KeyM') {
+        event.preventDefault();
+        video.muted = !video.muted;
+        if (!video.muted && video.volume === 0) {
+          updateVolume(0.2);
+        } else {
+          volumeLevel.textContent = `VOL ${video.muted ? 0 : Math.round(video.volume * 100)}%`;
+        }
+      } else if (event.code === 'KeyF') {
+        event.preventDefault();
+        if (document.fullscreenElement) document.exitFullscreen();
+        else document.querySelector('.player-glass').requestFullscreen().catch(() => {});
+      }
     });
   }
 
@@ -210,6 +447,13 @@ function renderPlayer(videoUrl, releaseName, releaseDate, shortId) {
       .writeText(embedCode)
       .then(() => alert('Код embed скопирован'));
   };
+
+  if (shortId) {
+    initFirebase().then((enabled) => {
+      if (enabled) setupEngagement(shortId);
+      else setEngagementMessage('FIREBASE ЕЩЁ НЕ НАСТРОЕН');
+    });
+  }
 }
 
 async function init() {

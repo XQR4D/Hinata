@@ -6,16 +6,14 @@
     <title>HINATA</title>
     <link rel="icon" type="image/svg+xml" href="icon.svg" />
     <link rel="alternate icon" type="image/x-icon" href="favicon.ico" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet" />
     <style>
       :root {
-        --bg: #000;
-        --surface: #0d0d0d;
+        --bg: #060807;
+        --surface: rgba(15, 20, 17, 0.82);
         --accent-primary: #15ff00;
         --accent-secondary: #ffffff;
+        --glass-line: rgba(220, 255, 225, 0.12);
       }
 
       * {
@@ -29,7 +27,9 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: var(--bg);
+        background-color: var(--bg);
+        background-image: linear-gradient(rgba(120, 255, 140, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(120, 255, 140, 0.025) 1px, transparent 1px);
+        background-size: 48px 48px;
         font-family: 'Dela Gothic One', sans-serif;
         color: #fff;
         display: flex;
@@ -43,6 +43,10 @@
         max-width: 1000px;
         max-height: 620px;
         background: var(--surface);
+        border: 1px solid var(--glass-line);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -51,7 +55,7 @@
       .video-wrapper {
         flex: 1;
         position: relative;
-        background: #000;
+        background: rgba(0, 0, 0, 0.72);
         overflow: hidden;
       }
 
@@ -100,8 +104,7 @@
         height: 0;
         border-style: solid;
         border-width: 12px 0 12px 20px;
-        border-color: transparent transparent transparent
-          var(--accent-secondary);
+        border-color: transparent transparent transparent var(--accent-secondary);
         margin-left: 5px;
       }
 
@@ -161,6 +164,113 @@
         display: none;
         letter-spacing: 2px;
       }
+
+      .progress-bar-wrap {
+        height: 3px;
+        position: relative;
+        background: #1a1a1a;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .progress-bar-fill {
+        width: 0%;
+        height: 100%;
+        background: var(--accent-primary);
+        transition: width 0.1s linear;
+      }
+
+      .progress-bar-dot {
+        position: absolute;
+        top: 50%;
+        left: 0%;
+        width: 10px;
+        height: 10px;
+        background: var(--accent-primary);
+        border: 2px solid #000;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 0 1px var(--accent-primary);
+        transition: left 0.1s linear;
+      }
+
+      .video-controls {
+        min-height: 42px;
+        padding: 7px 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #080808;
+        border-top: 1px solid #1a1a1a;
+      }
+
+      .video-control-button {
+        min-width: 34px;
+        height: 28px;
+        padding: 0 8px;
+        background: transparent;
+        border: 1px solid #2a2a2a;
+        color: var(--accent-primary);
+        font-family: 'Dela Gothic One', sans-serif;
+        font-size: 10px;
+        cursor: pointer;
+      }
+
+      .video-control-button:hover,
+      .video-control-button:focus-visible {
+        border-color: var(--accent-primary);
+        outline: none;
+      }
+
+      .video-time {
+        min-width: 76px;
+        color: #aaa;
+        font-size: 9px;
+        letter-spacing: 1px;
+      }
+
+      .volume-control {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-left: auto;
+        color: #777;
+        font-size: 8px;
+        letter-spacing: 1px;
+      }
+
+      .volume-control input {
+        width: 90px;
+        height: 3px;
+        accent-color: var(--accent-primary);
+        cursor: pointer;
+      }
+
+      .fullscreen-button {
+        min-width: 48px;
+        font-size: 8px;
+        letter-spacing: 1px;
+      }
+
+      @media (max-width: 520px) {
+        .video-controls {
+          gap: 6px;
+          padding: 6px;
+        }
+
+        .video-time {
+          min-width: 64px;
+          font-size: 8px;
+        }
+
+        .volume-control input {
+          width: 58px;
+        }
+
+        .video-control-button {
+          min-width: 32px;
+          padding: 0 6px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -184,6 +294,15 @@
       <div class="progress-bar-wrap" id="progressWrap">
         <div class="progress-bar-fill" id="progressFill"></div>
         <div class="progress-bar-dot" id="progressDot"></div>
+      </div>
+      <div class="video-controls" aria-label="Управление видео">
+        <button class="video-control-button" id="playPauseBtn" type="button" aria-label="Воспроизвести" title="Воспроизвести">▶</button>
+        <span class="video-time"><span id="currentTime">0:00</span> / <span id="duration">0:00</span></span>
+        <label class="volume-control" title="Громкость">
+          <span id="volumeLevel" aria-hidden="true">VOL 20%</span>
+          <input id="volumeControl" type="range" min="0" max="1" step="0.01" value="0.2" aria-label="Громкость" />
+        </label>
+        <button class="video-control-button fullscreen-button" id="fullscreenBtn" type="button" aria-label="Полный экран" title="Полный экран">FULL</button>
       </div>
     </div>
 
@@ -251,6 +370,12 @@
       const fill = document.getElementById('progressFill');
       const dot = document.getElementById('progressDot');
       const wrap = document.getElementById('progressWrap');
+      const playPauseBtn = document.getElementById('playPauseBtn');
+      const currentTime = document.getElementById('currentTime');
+      const duration = document.getElementById('duration');
+      const volumeControl = document.getElementById('volumeControl');
+      const volumeLevel = document.getElementById('volumeLevel');
+      const fullscreenBtn = document.getElementById('fullscreenBtn');
       const thumbOverlay = document.getElementById('thumbOverlay');
       const thumbImg = document.getElementById('thumbImg');
 
@@ -264,14 +389,64 @@
         thumbOverlay.classList.add('hide');
       }
 
-      video.volume = 0.2;
+      const formatTime = (seconds) => {
+        if (!Number.isFinite(seconds)) return '0:00';
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return `${minutes}:${remainingSeconds}`;
+      };
+
+      const updatePlayButton = () => {
+        const isPlaying = !video.paused && !video.ended;
+        playPauseBtn.textContent = isPlaying ? 'Ⅱ' : '▶';
+        playPauseBtn.setAttribute('aria-label', isPlaying ? 'Пауза' : 'Воспроизвести');
+        playPauseBtn.title = isPlaying ? 'Пауза' : 'Воспроизвести';
+      };
+
+      const updateVolume = (value) => {
+        const nextVolume = Math.min(1, Math.max(0, value));
+        video.volume = nextVolume;
+        video.muted = nextVolume === 0;
+        volumeControl.value = nextVolume.toString();
+        volumeLevel.textContent = `VOL ${Math.round(nextVolume * 100)}%`;
+      };
+
+      updateVolume(Number(volumeControl.value));
+
+      playPauseBtn.addEventListener('click', () => {
+        if (video.paused) {
+          if (video.ended) {
+            video.currentTime = 0;
+            endedMessage.style.display = 'none';
+          }
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      });
+
+      volumeControl.addEventListener('input', () => {
+        updateVolume(Number(volumeControl.value));
+      });
+
+      fullscreenBtn.addEventListener('click', () => {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else container.requestFullscreen();
+      });
 
       video.addEventListener('timeupdate', () => {
         if (!video.duration) return;
         const pct = (video.currentTime / video.duration) * 100;
         fill.style.width = pct + '%';
         dot.style.left = pct + '%';
+        currentTime.textContent = formatTime(video.currentTime);
       });
+
+      video.addEventListener('loadedmetadata', () => {
+        duration.textContent = formatTime(video.duration);
+      });
+      video.addEventListener('play', updatePlayButton);
+      video.addEventListener('pause', updatePlayButton);
 
       wrap.addEventListener('click', (e) => {
         if (!video.duration) return;
@@ -280,13 +455,46 @@
           ((e.clientX - rect.left) / rect.width) * video.duration;
       });
 
+      document.addEventListener('keydown', (event) => {
+        const target = event.target;
+        if (target instanceof HTMLTextAreaElement || target.isContentEditable) return;
+
+        if (event.code === 'Space' || event.code === 'KeyK') {
+          event.preventDefault();
+          if (video.paused) video.play().catch(() => {});
+          else video.pause();
+        } else if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {
+          event.preventDefault();
+          if (!Number.isFinite(video.duration)) return;
+          const change = event.code === 'ArrowLeft' ? -5 : 5;
+          video.currentTime = Math.min(video.duration, Math.max(0, video.currentTime + change));
+        } else if (event.code === 'ArrowUp' || event.code === 'ArrowDown') {
+          event.preventDefault();
+          const currentVolume = video.muted ? 0 : video.volume;
+          const change = event.code === 'ArrowUp' ? 0.1 : -0.1;
+          updateVolume(currentVolume + change);
+        } else if (event.code === 'KeyM') {
+          event.preventDefault();
+          video.muted = !video.muted;
+          if (!video.muted && video.volume === 0) {
+            updateVolume(0.2);
+          } else {
+            volumeLevel.textContent = `VOL ${video.muted ? 0 : Math.round(video.volume * 100)}%`;
+          }
+        } else if (event.code === 'KeyF') {
+          event.preventDefault();
+          if (document.fullscreenElement) document.exitFullscreen();
+          else container.requestFullscreen().catch(() => {});
+        }
+      });
+
       function startPlayer(src) {
         source.src = src;
         video.load();
       }
 
       container.addEventListener('click', function (e) {
-        if (e.target.closest('#progressWrap')) return;
+        if (e.target.closest('#progressWrap, .video-controls')) return;
         if (video.paused || video.ended) {
           if (video.ended) {
             video.currentTime = 0;
@@ -294,17 +502,14 @@
           }
           playBtn.classList.add('hidden');
           endedMessage.style.display = 'none';
-          video.controls = true;
           video.play().catch(() => {
             playBtn.classList.remove('hidden');
-            video.controls = false;
           });
         }
       });
 
       video.addEventListener('ended', () => {
         playBtn.classList.remove('hidden');
-        video.controls = false;
         endedMessage.style.display = 'block';
       });
 
