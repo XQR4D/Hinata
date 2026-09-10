@@ -180,6 +180,12 @@
         z-index: 25;
       }
 
+      .controls-hidden .progress-bar-wrap,
+      .controls-hidden .video-controls {
+        opacity: 0;
+        pointer-events: none;
+      }
+
       .progress-bar-fill {
         width: 0%;
         height: 100%;
@@ -287,7 +293,7 @@
     </style>
   </head>
   <body>
-    <div class="embed-container" id="container">
+    <div class="embed-container controls-hidden" id="container">
       <div class="video-wrapper">
         <video id="v" preload="metadata" playsinline>
           <source id="videoSource" src="" type="video/mp4" />
@@ -563,6 +569,7 @@
       });
 
       video.addEventListener("play", () => {
+        container.classList.remove("controls-hidden");
         playBtn.classList.add("hidden");
         hideThumb();
       });
