@@ -6,7 +6,10 @@
     <title>HINATA</title>
     <link rel="icon" type="image/svg+xml" href="icon.svg" />
     <link rel="alternate icon" type="image/x-icon" href="favicon.ico" />
-    <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
+      rel="stylesheet"
+    />
     <style>
       :root {
         --bg: #060807;
@@ -28,9 +31,15 @@
         height: 100%;
         overflow: hidden;
         background-color: var(--bg);
-        background-image: linear-gradient(rgba(120, 255, 140, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(120, 255, 140, 0.025) 1px, transparent 1px);
+        background-image:
+          linear-gradient(rgba(120, 255, 140, 0.025) 1px, transparent 1px),
+          linear-gradient(
+            90deg,
+            rgba(120, 255, 140, 0.025) 1px,
+            transparent 1px
+          );
         background-size: 48px 48px;
-        font-family: 'Dela Gothic One', sans-serif;
+        font-family: "Dela Gothic One", sans-serif;
         color: #fff;
         display: flex;
         align-items: center;
@@ -99,12 +108,13 @@
       }
 
       .play-overlay::after {
-        content: '';
+        content: "";
         width: 0;
         height: 0;
         border-style: solid;
         border-width: 12px 0 12px 20px;
-        border-color: transparent transparent transparent var(--accent-secondary);
+        border-color: transparent transparent transparent
+          var(--accent-secondary);
         margin-left: 5px;
       }
 
@@ -210,7 +220,7 @@
         background: transparent;
         border: 1px solid #2a2a2a;
         color: var(--accent-primary);
-        font-family: 'Dela Gothic One', sans-serif;
+        font-family: "Dela Gothic One", sans-serif;
         font-size: 10px;
         cursor: pointer;
       }
@@ -296,32 +306,59 @@
         <div class="progress-bar-dot" id="progressDot"></div>
       </div>
       <div class="video-controls" aria-label="Управление видео">
-        <button class="video-control-button" id="playPauseBtn" type="button" aria-label="Воспроизвести" title="Воспроизвести">▶</button>
-        <span class="video-time"><span id="currentTime">0:00</span> / <span id="duration">0:00</span></span>
+        <button
+          class="video-control-button"
+          id="playPauseBtn"
+          type="button"
+          aria-label="Воспроизвести"
+          title="Воспроизвести"
+        >
+          ▶
+        </button>
+        <span class="video-time"
+          ><span id="currentTime">0:00</span> /
+          <span id="duration">0:00</span></span
+        >
         <label class="volume-control" title="Громкость">
           <span id="volumeLevel" aria-hidden="true">VOL 20%</span>
-          <input id="volumeControl" type="range" min="0" max="1" step="0.01" value="0.2" aria-label="Громкость" />
+          <input
+            id="volumeControl"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.2"
+            aria-label="Громкость"
+          />
         </label>
-        <button class="video-control-button fullscreen-button" id="fullscreenBtn" type="button" aria-label="Полный экран" title="Полный экран">FULL</button>
+        <button
+          class="video-control-button fullscreen-button"
+          id="fullscreenBtn"
+          type="button"
+          aria-label="Полный экран"
+          title="Полный экран"
+        >
+          FULL
+        </button>
       </div>
     </div>
 
     <script>
-      const GITHUB_USER = 'xqr4d';
-      const GITHUB_REPO = 'Hinata';
+      const GITHUB_USER = "xqr4d";
+      const GITHUB_REPO = "Hinata";
 
       async function makeId(tag, file) {
         const str = `${tag}|${file}`;
         const buf = await crypto.subtle.digest(
-          'SHA-256',
-          new TextEncoder().encode(str)
+          "SHA-256",
+          new TextEncoder().encode(str),
         );
         const chars =
-          'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         return Array.from(new Uint8Array(buf))
           .slice(0, 8)
           .map((b) => chars[b % chars.length])
-          .join('');
+          .join("");
       }
 
       async function fetchAllReleases() {
@@ -329,9 +366,9 @@
           all = [];
         while (true) {
           const r = await fetch(
-            `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/releases?per_page=100&page=${page}`
+            `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/releases?per_page=100&page=${page}`,
           );
-          if (!r.ok) throw new Error('GitHub API error');
+          if (!r.ok) throw new Error("GitHub API error");
           const batch = await r.json();
           if (!batch.length) break;
           all = all.concat(batch);
@@ -349,7 +386,7 @@
               const id = await makeId(release.tag_name, asset.name);
               if (id === shortId) {
                 const thumbAsset = release.assets.find(
-                  (a) => a.name === 'maxresdefault.jpg'
+                  (a) => a.name === "maxresdefault.jpg",
                 );
                 return {
                   url: `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/releases/download/${encodeURIComponent(release.tag_name)}/${encodeURIComponent(asset.name)}`,
@@ -362,45 +399,50 @@
         return null;
       }
 
-      const video = document.getElementById('v');
-      const source = document.getElementById('videoSource');
-      const container = document.getElementById('container');
-      const playBtn = document.getElementById('playBtn');
-      const endedMessage = document.getElementById('endedMessage');
-      const fill = document.getElementById('progressFill');
-      const dot = document.getElementById('progressDot');
-      const wrap = document.getElementById('progressWrap');
-      const playPauseBtn = document.getElementById('playPauseBtn');
-      const currentTime = document.getElementById('currentTime');
-      const duration = document.getElementById('duration');
-      const volumeControl = document.getElementById('volumeControl');
-      const volumeLevel = document.getElementById('volumeLevel');
-      const fullscreenBtn = document.getElementById('fullscreenBtn');
-      const thumbOverlay = document.getElementById('thumbOverlay');
-      const thumbImg = document.getElementById('thumbImg');
+      const video = document.getElementById("v");
+      const source = document.getElementById("videoSource");
+      const container = document.getElementById("container");
+      const playBtn = document.getElementById("playBtn");
+      const endedMessage = document.getElementById("endedMessage");
+      const fill = document.getElementById("progressFill");
+      const dot = document.getElementById("progressDot");
+      const wrap = document.getElementById("progressWrap");
+      const playPauseBtn = document.getElementById("playPauseBtn");
+      const currentTime = document.getElementById("currentTime");
+      const duration = document.getElementById("duration");
+      const volumeControl = document.getElementById("volumeControl");
+      const volumeLevel = document.getElementById("volumeLevel");
+      const fullscreenBtn = document.getElementById("fullscreenBtn");
+      const thumbOverlay = document.getElementById("thumbOverlay");
+      const thumbImg = document.getElementById("thumbImg");
 
       function showThumb(url) {
         if (!url) return;
         thumbImg.src = url;
-        thumbImg.onload = () => thumbImg.classList.add('loaded');
+        thumbImg.onload = () => thumbImg.classList.add("loaded");
       }
 
       function hideThumb() {
-        thumbOverlay.classList.add('hide');
+        thumbOverlay.classList.add("hide");
       }
 
       const formatTime = (seconds) => {
-        if (!Number.isFinite(seconds)) return '0:00';
+        if (!Number.isFinite(seconds)) return "0:00";
         const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
+        const remainingSeconds = Math.floor(seconds % 60)
+          .toString()
+          .padStart(2, "0");
         return `${minutes}:${remainingSeconds}`;
       };
 
       const updatePlayButton = () => {
         const isPlaying = !video.paused && !video.ended;
-        playPauseBtn.textContent = isPlaying ? 'Ⅱ' : '▶';
-        playPauseBtn.setAttribute('aria-label', isPlaying ? 'Пауза' : 'Воспроизвести');
-        playPauseBtn.title = isPlaying ? 'Пауза' : 'Воспроизвести';
+        playPauseBtn.textContent = isPlaying ? "Ⅱ" : "▶";
+        playPauseBtn.setAttribute(
+          "aria-label",
+          isPlaying ? "Пауза" : "Воспроизвести",
+        );
+        playPauseBtn.title = isPlaying ? "Пауза" : "Воспроизвести";
       };
 
       const updateVolume = (value) => {
@@ -413,11 +455,11 @@
 
       updateVolume(Number(volumeControl.value));
 
-      playPauseBtn.addEventListener('click', () => {
+      playPauseBtn.addEventListener("click", () => {
         if (video.paused) {
           if (video.ended) {
             video.currentTime = 0;
-            endedMessage.style.display = 'none';
+            endedMessage.style.display = "none";
           }
           video.play().catch(() => {});
         } else {
@@ -425,55 +467,59 @@
         }
       });
 
-      volumeControl.addEventListener('input', () => {
+      volumeControl.addEventListener("input", () => {
         updateVolume(Number(volumeControl.value));
       });
 
-      fullscreenBtn.addEventListener('click', () => {
+      fullscreenBtn.addEventListener("click", () => {
         if (document.fullscreenElement) document.exitFullscreen();
         else container.requestFullscreen();
       });
 
-      video.addEventListener('timeupdate', () => {
+      video.addEventListener("timeupdate", () => {
         if (!video.duration) return;
         const pct = (video.currentTime / video.duration) * 100;
-        fill.style.width = pct + '%';
-        dot.style.left = pct + '%';
+        fill.style.width = pct + "%";
+        dot.style.left = pct + "%";
         currentTime.textContent = formatTime(video.currentTime);
       });
 
-      video.addEventListener('loadedmetadata', () => {
+      video.addEventListener("loadedmetadata", () => {
         duration.textContent = formatTime(video.duration);
       });
-      video.addEventListener('play', updatePlayButton);
-      video.addEventListener('pause', updatePlayButton);
+      video.addEventListener("play", updatePlayButton);
+      video.addEventListener("pause", updatePlayButton);
 
-      wrap.addEventListener('click', (e) => {
+      wrap.addEventListener("click", (e) => {
         if (!video.duration) return;
         const rect = wrap.getBoundingClientRect();
         video.currentTime =
           ((e.clientX - rect.left) / rect.width) * video.duration;
       });
 
-      document.addEventListener('keydown', (event) => {
+      document.addEventListener("keydown", (event) => {
         const target = event.target;
-        if (target instanceof HTMLTextAreaElement || target.isContentEditable) return;
+        if (target instanceof HTMLTextAreaElement || target.isContentEditable)
+          return;
 
-        if (event.code === 'Space' || event.code === 'KeyK') {
+        if (event.code === "Space" || event.code === "KeyK") {
           event.preventDefault();
           if (video.paused) video.play().catch(() => {});
           else video.pause();
-        } else if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {
+        } else if (event.code === "ArrowLeft" || event.code === "ArrowRight") {
           event.preventDefault();
           if (!Number.isFinite(video.duration)) return;
-          const change = event.code === 'ArrowLeft' ? -5 : 5;
-          video.currentTime = Math.min(video.duration, Math.max(0, video.currentTime + change));
-        } else if (event.code === 'ArrowUp' || event.code === 'ArrowDown') {
+          const change = event.code === "ArrowLeft" ? -5 : 5;
+          video.currentTime = Math.min(
+            video.duration,
+            Math.max(0, video.currentTime + change),
+          );
+        } else if (event.code === "ArrowUp" || event.code === "ArrowDown") {
           event.preventDefault();
           const currentVolume = video.muted ? 0 : video.volume;
-          const change = event.code === 'ArrowUp' ? 0.1 : -0.1;
+          const change = event.code === "ArrowUp" ? 0.1 : -0.1;
           updateVolume(currentVolume + change);
-        } else if (event.code === 'KeyM') {
+        } else if (event.code === "KeyM") {
           event.preventDefault();
           video.muted = !video.muted;
           if (!video.muted && video.volume === 0) {
@@ -481,7 +527,7 @@
           } else {
             volumeLevel.textContent = `VOL ${video.muted ? 0 : Math.round(video.volume * 100)}%`;
           }
-        } else if (event.code === 'KeyF') {
+        } else if (event.code === "KeyF") {
           event.preventDefault();
           if (document.fullscreenElement) document.exitFullscreen();
           else container.requestFullscreen().catch(() => {});
@@ -493,36 +539,36 @@
         video.load();
       }
 
-      container.addEventListener('click', function (e) {
-        if (e.target.closest('#progressWrap, .video-controls')) return;
+      container.addEventListener("click", function (e) {
+        if (e.target.closest("#progressWrap, .video-controls")) return;
         if (video.paused || video.ended) {
           if (video.ended) {
             video.currentTime = 0;
-            endedMessage.style.display = 'none';
+            endedMessage.style.display = "none";
           }
-          playBtn.classList.add('hidden');
-          endedMessage.style.display = 'none';
+          playBtn.classList.add("hidden");
+          endedMessage.style.display = "none";
           video.play().catch(() => {
-            playBtn.classList.remove('hidden');
+            playBtn.classList.remove("hidden");
           });
         }
       });
 
-      video.addEventListener('ended', () => {
-        playBtn.classList.remove('hidden');
-        endedMessage.style.display = 'block';
+      video.addEventListener("ended", () => {
+        playBtn.classList.remove("hidden");
+        endedMessage.style.display = "block";
       });
 
-      video.addEventListener('play', () => {
-        playBtn.classList.add('hidden');
+      video.addEventListener("play", () => {
+        playBtn.classList.add("hidden");
         hideThumb();
       });
 
       async function init() {
         const params = new URLSearchParams(window.location.search);
-        const v = params.get('v');
+        const v = params.get("v");
         if (!v) return;
-        if (v.startsWith('http')) {
+        if (v.startsWith("http")) {
           startPlayer(decodeURIComponent(v));
         } else {
           try {
