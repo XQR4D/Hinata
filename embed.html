@@ -28,17 +28,21 @@
       body,
       html {
         width: 100%;
-        height: auto;
-        min-height: 0;
+        height: 100%;
         overflow: hidden;
         background: transparent;
         font-family: "Dela Gothic One", sans-serif;
         color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .embed-container {
         width: 100%;
-        height: auto;
+        height: 100%;
+        max-width: 1000px;
+        max-height: 620px;
         background: #080808;
         overflow: hidden;
         display: flex;
@@ -46,9 +50,7 @@
       }
 
       .video-wrapper {
-        width: 100%;
-        aspect-ratio: 16 / 9;
-        flex: none;
+        flex: 1;
         position: relative;
         background: rgba(0, 0, 0, 0.72);
         overflow: hidden;
@@ -192,6 +194,7 @@
 
       .video-controls {
         min-height: 42px;
+        flex-shrink: 0;
         padding: 7px 10px;
         display: flex;
         align-items: center;
