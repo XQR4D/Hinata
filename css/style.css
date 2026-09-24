@@ -449,6 +449,7 @@ video {
 
 .comment-form input,
 .comment-form textarea {
+  color: #ddd;
   background: #080808;
   background: rgba(5, 9, 7, 0.7);
   border: 1px solid var(--glass-line);
