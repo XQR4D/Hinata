@@ -1,6 +1,18 @@
 const GITHUB_USER = "xqr4d";
 const GITHUB_REPO = "Hinata";
 
+const ICONS = {
+  play: `<svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7L8 5z"/></svg>`,
+  pause: `<svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg>`,
+  fullscreen: `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>`,
+  link: `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
+  download: `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 11l5 5 5-5M5 19h14"/></svg>`,
+  embed: `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/></svg>`,
+  like: `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11v10H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h3zm0 0 4.5-7.5A2.5 2.5 0 0 1 14 5v3h5.2a2 2 0 0 1 1.96 2.38l-1.4 8A2 2 0 0 1 17.8 21H7"/></svg>`,
+  dislike: `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 13V3h3a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-3zm0 0-4.5 7.5A2.5 2.5 0 0 1 10 19v-3H4.8a2 2 0 0 1-1.96-2.38l1.4-8A2 2 0 0 1 6.2 3H17"/></svg>`,
+  send: `<svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 21 3l-7.5 18-2-7.5L3 11.5z"/></svg>`,
+};
+
 const app = document.getElementById("app");
 let firebaseDb = null;
 let firebaseUser = null;
@@ -133,12 +145,22 @@ async function setupEngagement(videoId) {
       setEngagementMessage("КОММЕНТАРИИ ВРЕМЕННО НЕДОСТУПНЫ");
     });
 
+  const textInput = document.getElementById("commentText");
+  const textWrap = document.getElementById("commentTextWrap");
+  const syncTextWrap = () => {
+    if (!textWrap) return;
+    textWrap.classList.toggle("has-value", Boolean(textInput.value.trim()));
+  };
+  if (textInput) {
+    textInput.addEventListener("input", syncTextWrap);
+    syncTextWrap();
+  }
+
   document
     .getElementById("commentForm")
     .addEventListener("submit", async (event) => {
       event.preventDefault();
       const nameInput = document.getElementById("commentName");
-      const textInput = document.getElementById("commentText");
       const submit = event.target.querySelector("button");
       const name = nameInput.value.trim().slice(0, 40);
       const text = textInput.value.trim().slice(0, 1000);
@@ -152,6 +174,7 @@ async function setupEngagement(videoId) {
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         });
         textInput.value = "";
+        syncTextWrap();
       } catch (error) {
         console.error("Firebase comment error:", error);
         setEngagementMessage("НЕ УДАЛОСЬ ОПУБЛИКОВАТЬ КОММЕНТАРИЙ");
@@ -175,6 +198,38 @@ async function makeId(tag, file) {
     .join("");
 }
 
+/** Ordered list of all videos (newest first). */
+async function getAllVideoEntries() {
+  const releases = await fetchAllReleases();
+  releases.sort(
+    (a, b) =>
+      new Date(b.published_at || b.created_at || 0) -
+      new Date(a.published_at || a.created_at || 0),
+  );
+  const entries = [];
+  for (const release of releases) {
+    for (const asset of release.assets) {
+      if (asset.name.match(/\.(mp4|mov|webm)$/i)) {
+        const thumbAsset = release.assets.find(
+          (a) => a.name === "maxresdefault.jpg",
+        );
+        const shortId = await makeId(release.tag_name, asset.name);
+        const rawDate = release.published_at || release.created_at;
+        entries.push({
+          id: shortId,
+          tag: release.tag_name,
+          file: asset.name,
+          title: release.name || release.tag_name || "Видео",
+          date: rawDate || null,
+          thumbUrl: thumbAsset ? thumbAsset.browser_download_url : null,
+          description: (release.body || "").trim(),
+        });
+      }
+    }
+  }
+  return entries;
+}
+
 async function fetchAllReleases() {
   let page = 1,
     all = [];
@@ -193,21 +248,8 @@ async function fetchAllReleases() {
 }
 
 async function resolveId(shortId) {
-  const releases = await fetchAllReleases();
-  for (const release of releases) {
-    for (const asset of release.assets) {
-      if (asset.name.match(/\.(mp4|mov|webm)$/i)) {
-        const id = await makeId(release.tag_name, asset.name);
-        if (id === shortId)
-          return {
-            tag: release.tag_name,
-            file: asset.name,
-            title: release.name || release.tag_name || "Видео",
-          };
-      }
-    }
-  }
-  return null;
+  const entries = await getAllVideoEntries();
+  return entries.find((e) => e.id === shortId) || null;
 }
 
 function buildVideoUrl(tag, file) {
@@ -294,7 +336,62 @@ async function renderGallery() {
   }
 }
 
-function renderPlayer(videoUrl, releaseName, releaseDate, shortId) {
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Simple markdown-ish body → safe HTML (links + line breaks). */
+function formatDescription(raw) {
+  if (!raw) return "";
+  let text = escapeHtml(raw);
+  // [label](url)
+  text = text.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+  );
+  // bare urls
+  text = text.replace(
+    /(?<!["'>])(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
+  );
+  text = text.replace(/\r\n|\r|\n/g, "<br>");
+  return text;
+}
+
+function buildSideCard(entry, label) {
+  if (!entry) {
+    return `
+      <div class="player-side player-side-empty">
+        <div class="side-empty-label">${label || ""}</div>
+      </div>`;
+  }
+  const dateStr = entry.date
+    ? new Date(entry.date).toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "";
+  const thumb = entry.thumbUrl
+    ? `<img class="side-thumb" src="${entry.thumbUrl}" alt="" loading="lazy">`
+    : `<div class="side-thumb-placeholder">НЕТ ПРЕВЬЮ</div>`;
+  return `
+    <a class="player-side player-side-card" href="?v=${entry.id}" title="${entry.title}">
+      <div class="side-label">${label}</div>
+      <div class="side-thumb-wrap">${thumb}</div>
+      <div class="side-info">
+        <div class="side-title">${entry.title}</div>
+        ${dateStr ? `<div class="side-date">${dateStr}</div>` : ""}
+      </div>
+    </a>`;
+}
+
+function renderPlayer(videoUrl, releaseName, releaseDate, shortId, prevEntry, nextEntry, description) {
   const baseUrl =
     window.location.origin + window.location.pathname.replace("index.html", "");
   const embedParam = shortId || encodeURIComponent(videoUrl);
@@ -309,57 +406,72 @@ function renderPlayer(videoUrl, releaseName, releaseDate, shortId) {
       })
     : "";
 
+  const leftHtml = prevEntry
+    ? buildSideCard(prevEntry, "← ПРЕДЫДУЩИЙ")
+    : buildSideCard(null, "");
+  const rightHtml = nextEntry
+    ? buildSideCard(nextEntry, "СЛЕДУЮЩИЙ →")
+    : buildSideCard(null, "РЕКОМЕНДУЕМ К ПРОСМОТРУ");
+
   app.innerHTML = `
-    <div class="player-container">
-      <div class="player-glass">
-        <video id="v" autoplay preload="metadata" playsinline>
-          <source src="${videoUrl}" type="video/mp4">
-        </video>
+    <div class="player-layout">
+      ${leftHtml}
+      <div class="player-container">
+        <div class="player-glass">
+          <video id="v" autoplay preload="metadata" playsinline>
+            <source src="${videoUrl}" type="video/mp4">
+          </video>
 
-        <div class="progress-bar-wrap" id="progressWrap">
-          <div class="progress-bar-fill" id="progressFill"></div>
-          <div class="progress-bar-dot" id="progressDot"></div>
-        </div>
-
-        <div class="video-controls" aria-label="Управление видео">
-          <button class="video-control-button" id="playPauseBtn" type="button" aria-label="Воспроизвести" title="Воспроизвести">▶</button>
-          <span class="video-time"><span id="currentTime">0:00</span> / <span id="duration">0:00</span></span>
-          <label class="volume-control" title="Громкость">
-            <span id="volumeLevel" aria-hidden="true">VOL 20%</span>
-            <input id="volumeControl" type="range" min="0" max="1" step="0.01" value="0.2" aria-label="Громкость">
-          </label>
-          <button class="video-control-button fullscreen-button" id="fullscreenBtn" type="button" aria-label="Полный экран" title="Полный экран">FULL</button>
-        </div>
-
-        <div class="player-bottom">
-          <div class="player-title-block">
-            <div class="player-title">${releaseName || "БЕЗ НАЗВАНИЯ"}</div>
-            ${dateStr ? `<div class="player-date">${dateStr}</div>` : ""}
+          <div class="progress-bar-wrap" id="progressWrap">
+            <div class="progress-bar-fill" id="progressFill"></div>
+            <div class="progress-bar-dot" id="progressDot"></div>
           </div>
-          <div class="controls">
-            <button class="btn" id="copyLinkBtn">ССЫЛКА</button>
-            <a href="${videoUrl}" target="_blank" class="btn">СКАЧАТЬ</a>
-            <button class="btn btn-embed" id="copyEmbedBtn">&lt;/&gt; EMBED</button>
+
+          <div class="video-controls" aria-label="Управление видео">
+            <button class="video-control-button" id="playPauseBtn" type="button" aria-label="Воспроизвести" title="Воспроизвести">${ICONS.play}</button>
+            <span class="video-time"><span id="currentTime">0:00</span> / <span id="duration">0:00</span></span>
+            <label class="volume-control" title="Громкость">
+              <span id="volumeLevel" aria-hidden="true">VOL 20%</span>
+              <input id="volumeControl" type="range" min="0" max="1" step="0.01" value="0.2" aria-label="Громкость">
+            </label>
+            <button class="video-control-button fullscreen-button" id="fullscreenBtn" type="button" aria-label="Полный экран" title="Полный экран">${ICONS.fullscreen}<span>FULL</span></button>
+          </div>
+
+          <div class="player-bottom">
+            <div class="player-title-block">
+              <div class="player-title">${releaseName || "БЕЗ НАЗВАНИЯ"}</div>
+              ${dateStr ? `<div class="player-date">${dateStr}</div>` : ""}
+              ${description ? `<div class="player-description">${formatDescription(description)}</div>` : ""}
+            </div>
+            <div class="controls">
+              <button class="btn" id="copyLinkBtn">${ICONS.link} ССЫЛКА</button>
+              <a href="${videoUrl}" target="_blank" class="btn">${ICONS.download} СКАЧАТЬ</a>
+              <button class="btn btn-embed" id="copyEmbedBtn">${ICONS.embed} EMBED</button>
+            </div>
           </div>
         </div>
+        <section class="engagement" aria-label="Статистика и комментарии">
+          <div class="engagement-stats">
+            <span class="stat"><strong id="viewsCount">0</strong> ПРОСМОТРОВ</span>
+            <button class="vote-button" data-vote="like" type="button">${ICONS.like} НРАВИТСЯ <strong id="likesCount">0</strong></button>
+            <button class="vote-button" data-vote="dislike" type="button">${ICONS.dislike} НЕ НРАВИТСЯ <strong id="dislikesCount">0</strong></button>
+          </div>
+          <div id="engagementStatus" class="engagement-status"></div>
+          <div class="comments">
+            <h2>КОММЕНТАРИИ</h2>
+            <form id="commentForm" class="comment-form">
+              <input id="commentName" maxlength="40" placeholder="ИМЯ" required />
+              <div class="comment-form-text-wrap" id="commentTextWrap">
+                <textarea id="commentText" maxlength="1000" rows="3" placeholder="" required></textarea>
+                <span class="textarea-placeholder">ВАШ КОММЕНТАРИЙ</span>
+              </div>
+              <button class="btn" type="submit">${ICONS.send} ОТПРАВИТЬ</button>
+            </form>
+            <div id="commentsList" class="comments-list"><div class="comments-empty">ЗАГРУЗКА КОММЕНТАРИЕВ...</div></div>
+          </div>
+        </section>
       </div>
-      <section class="engagement" aria-label="Статистика и комментарии">
-        <div class="engagement-stats">
-          <span class="stat"><strong id="viewsCount">0</strong> ПРОСМОТРОВ</span>
-          <button class="vote-button" data-vote="like" type="button">НРАВИТСЯ <strong id="likesCount">0</strong></button>
-          <button class="vote-button" data-vote="dislike" type="button">НЕ НРАВИТСЯ <strong id="dislikesCount">0</strong></button>
-        </div>
-        <div id="engagementStatus" class="engagement-status"></div>
-        <div class="comments">
-          <h2>КОММЕНТАРИИ</h2>
-          <form id="commentForm" class="comment-form">
-            <input id="commentName" maxlength="40" placeholder="ИМЯ" required />
-            <textarea id="commentText" maxlength="1000" rows="3" placeholder="ВАШ КОММЕНТАРИЙ" required></textarea>
-            <button class="btn" type="submit">ОТПРАВИТЬ</button>
-          </form>
-          <div id="commentsList" class="comments-list"><div class="comments-empty">ЗАГРУЗКА КОММЕНТАРИЕВ...</div></div>
-        </div>
-      </section>
+      ${rightHtml}
     </div>`;
 
   const video = document.getElementById("v");
@@ -384,7 +496,7 @@ function renderPlayer(videoUrl, releaseName, releaseDate, shortId) {
 
   const updatePlayButton = () => {
     const isPlaying = !video.paused && !video.ended;
-    playPauseBtn.textContent = isPlaying ? "Ⅱ" : "▶";
+    playPauseBtn.innerHTML = isPlaying ? ICONS.pause : ICONS.play;
     playPauseBtn.setAttribute(
       "aria-label",
       isPlaying ? "Пауза" : "Воспроизвести",
@@ -497,6 +609,18 @@ function renderPlayer(videoUrl, releaseName, releaseDate, shortId) {
       .then(() => alert("Код embed скопирован"));
   };
 
+  const textInputInit = document.getElementById("commentText");
+  const textWrapInit = document.getElementById("commentTextWrap");
+  if (textInputInit && textWrapInit) {
+    const sync = () =>
+      textWrapInit.classList.toggle(
+        "has-value",
+        Boolean(textInputInit.value.trim()),
+      );
+    textInputInit.addEventListener("input", sync);
+    sync();
+  }
+
   if (shortId) {
     initFirebase().then((enabled) => {
       if (enabled) setupEngagement(shortId);
@@ -512,14 +636,26 @@ async function init() {
   if (v) {
     if (v.startsWith("http")) {
       const title = params.get("t") || params.get("n") || "Video";
-      renderPlayer(v, title, null, null);
+      renderPlayer(v, title, null, null, null, null, null);
     } else {
       app.innerHTML = `<div class="state-msg">ЗАГРУЗКА...</div>`;
       try {
-        const entry = await resolveId(v);
-        if (entry) {
+        const entries = await getAllVideoEntries();
+        const idx = entries.findIndex((e) => e.id === v);
+        if (idx >= 0) {
+          const entry = entries[idx];
+          const prevEntry = idx > 0 ? entries[idx - 1] : null;
+          const nextEntry = idx < entries.length - 1 ? entries[idx + 1] : null;
           const videoUrl = buildVideoUrl(entry.tag, entry.file);
-          renderPlayer(videoUrl, entry.title, entry.date, v);
+          renderPlayer(
+            videoUrl,
+            entry.title,
+            entry.date,
+            v,
+            prevEntry,
+            nextEntry,
+            entry.description,
+          );
         } else {
           app.innerHTML = `<div class="state-msg">ВИДЕО НЕ НАЙДЕНО<br><a href="index.html" style="color:var(--accent-primary);font-size:9px;letter-spacing:2px;">← НАЗАД</a></div>`;
         }
