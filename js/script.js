@@ -336,7 +336,6 @@ async function renderGallery() {
   }
 }
 
-
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")
@@ -391,7 +390,15 @@ function buildSideCard(entry, label) {
     </a>`;
 }
 
-function renderPlayer(videoUrl, releaseName, releaseDate, shortId, prevEntry, nextEntry, description) {
+function renderPlayer(
+  videoUrl,
+  releaseName,
+  releaseDate,
+  shortId,
+  prevEntry,
+  nextEntry,
+  description,
+) {
   const baseUrl =
     window.location.origin + window.location.pathname.replace("index.html", "");
   const embedParam = shortId || encodeURIComponent(videoUrl);

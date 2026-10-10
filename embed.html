@@ -270,7 +270,6 @@
         letter-spacing: 1px;
       }
 
-
       .video-control-button {
         display: inline-flex;
         align-items: center;
@@ -351,7 +350,9 @@
           aria-label="Воспроизвести"
           title="Воспроизвести"
         >
-          <svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7L8 5z"/></svg>
+          <svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5v14l11-7L8 5z" />
+          </svg>
         </button>
         <span class="video-time"
           ><span id="currentTime">0:00</span> /
@@ -376,14 +377,15 @@
           aria-label="Полный экран"
           title="Полный экран"
         >
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+          </svg>
           <span>FULL</span>
         </button>
       </div>
     </div>
 
     <script>
-
       const ICONS = {
         play: `<svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7L8 5z"/></svg>`,
         pause: `<svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg>`,
