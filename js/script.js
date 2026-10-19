@@ -1,5 +1,8 @@
 const GITHUB_USER = "xqr4d";
 const GITHUB_REPO = "Hinata";
+const PLAYER_VOLUME_STORAGE_KEY = "hinata-volume";
+const LEGACY_PLAYER_VOLUME_STORAGE_KEY = "hinata-player-volume";
+const DEFAULT_VOLUME = 0.2;
 
 const ICONS = {
   play: `<svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7L8 5z"/></svg>`,
@@ -198,7 +201,6 @@ async function makeId(tag, file) {
     .join("");
 }
 
-/** Ordered list of all videos (newest first). */
 async function getAllVideoEntries() {
   const releases = await fetchAllReleases();
   releases.sort(
@@ -344,16 +346,13 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
-/** Simple markdown-ish body → safe HTML (links + line breaks). */
 function formatDescription(raw) {
   if (!raw) return "";
   let text = escapeHtml(raw);
-  // [label](url)
   text = text.replace(
     /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
     '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
   );
-  // bare urls
   text = text.replace(
     /(?<!["'>])(https?:\/\/[^\s<]+)/g,
     '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
@@ -398,6 +397,7 @@ function renderPlayer(
   prevEntry,
   nextEntry,
   description,
+  thumbnailUrl,
 ) {
   const baseUrl =
     window.location.origin + window.location.pathname.replace("index.html", "");
@@ -425,23 +425,32 @@ function renderPlayer(
       ${leftHtml}
       <div class="player-container">
         <div class="player-glass">
-          <video id="v" autoplay preload="metadata" playsinline>
-            <source src="${videoUrl}" type="video/mp4">
-          </video>
+          <div class="player-video-wrapper">
+            <video id="v" preload="metadata" playsinline>
+              <source src="${videoUrl}" type="video/mp4">
+            </video>
 
-          <div class="progress-bar-wrap" id="progressWrap">
-            <div class="progress-bar-fill" id="progressFill"></div>
-            <div class="progress-bar-dot" id="progressDot"></div>
-          </div>
+            <div class="player-preview" id="playerPreview">
+              ${thumbnailUrl ? `<img src="${thumbnailUrl}" alt="" />` : ""}
+              <button class="player-start-button" id="playerStartBtn" type="button" aria-label="Начать воспроизведение" title="Начать воспроизведение">
+                ${ICONS.play}
+              </button>
+            </div>
 
-          <div class="video-controls" aria-label="Управление видео">
-            <button class="video-control-button" id="playPauseBtn" type="button" aria-label="Воспроизвести" title="Воспроизвести">${ICONS.play}</button>
-            <span class="video-time"><span id="currentTime">0:00</span> / <span id="duration">0:00</span></span>
-            <label class="volume-control" title="Громкость">
-              <span id="volumeLevel" aria-hidden="true">VOL 20%</span>
-              <input id="volumeControl" type="range" min="0" max="1" step="0.01" value="0.2" aria-label="Громкость">
-            </label>
-            <button class="video-control-button fullscreen-button" id="fullscreenBtn" type="button" aria-label="Полный экран" title="Полный экран">${ICONS.fullscreen}<span>FULL</span></button>
+            <div class="progress-bar-wrap" id="progressWrap">
+              <div class="progress-bar-fill" id="progressFill"></div>
+              <div class="progress-bar-dot" id="progressDot"></div>
+            </div>
+
+            <div class="video-controls" aria-label="Управление видео">
+              <button class="video-control-button" id="playPauseBtn" type="button" aria-label="Воспроизвести" title="Воспроизвести">${ICONS.play}</button>
+              <span class="video-time"><span id="currentTime">0:00</span> / <span id="duration">0:00</span></span>
+              <label class="volume-control" title="Громкость">
+                <span id="volumeLevel" aria-hidden="true">VOL 20%</span>
+                <input id="volumeControl" type="range" min="0" max="1" step="0.01" value="0.2" aria-label="Громкость">
+              </label>
+              <button class="video-control-button fullscreen-button" id="fullscreenBtn" type="button" aria-label="Полный экран" title="Полный экран">${ICONS.fullscreen}<span>FULL</span></button>
+            </div>
           </div>
 
           <div class="player-bottom">
@@ -491,6 +500,8 @@ function renderPlayer(
   const volumeControl = document.getElementById("volumeControl");
   const volumeLevel = document.getElementById("volumeLevel");
   const fullscreenBtn = document.getElementById("fullscreenBtn");
+  const playerPreview = document.getElementById("playerPreview");
+  const playerStartBtn = document.getElementById("playerStartBtn");
 
   const formatTime = (seconds) => {
     if (!Number.isFinite(seconds)) return "0:00";
@@ -511,19 +522,61 @@ function renderPlayer(
     playPauseBtn.title = isPlaying ? "Пауза" : "Воспроизвести";
   };
 
-  const updateVolume = (value) => {
-    const nextVolume = Math.min(1, Math.max(0, value));
-    video.volume = nextVolume;
-    video.muted = nextVolume === 0;
-    volumeControl.value = nextVolume.toString();
-    volumeLevel.textContent = `VOL ${Math.round(nextVolume * 100)}%`;
-  };
-
   if (video) {
-    updateVolume(Number(volumeControl.value));
+    const clampVolume = (value) =>
+      Math.min(1, Math.max(0, Math.round(Number(value) * 100) / 100));
+
+    const readSavedVolume = () => {
+      try {
+        const raw =
+          localStorage.getItem(PLAYER_VOLUME_STORAGE_KEY) ??
+          localStorage.getItem(LEGACY_PLAYER_VOLUME_STORAGE_KEY);
+        if (raw === null) return DEFAULT_VOLUME;
+        const parsed = parseFloat(raw);
+        return Number.isFinite(parsed) ? clampVolume(parsed) : DEFAULT_VOLUME;
+      } catch (_) {
+        return DEFAULT_VOLUME;
+      }
+    };
+
+    const saveVolume = (value) => {
+      try {
+        localStorage.setItem(PLAYER_VOLUME_STORAGE_KEY, String(value));
+      } catch (_) {}
+    };
+
+    let lastNonZeroVolume = DEFAULT_VOLUME;
+
+    const updateVolume = (value, persist = true) => {
+      const nextVolume = clampVolume(value);
+      if (nextVolume > 0) lastNonZeroVolume = nextVolume;
+      video.volume = nextVolume;
+      video.muted = nextVolume === 0;
+      volumeControl.value = String(nextVolume);
+      volumeLevel.textContent = `VOL ${Math.round(nextVolume * 100)}%`;
+      if (persist) saveVolume(nextVolume);
+    };
+
+    let userRequestedPlay = false;
+
+    const startPlayback = () => {
+      userRequestedPlay = true;
+      if (video.ended) video.currentTime = 0;
+      video.play().catch((error) => {
+        userRequestedPlay = false;
+        console.error("Video playback error:", error);
+      });
+    };
+
+    video.autoplay = false;
+    video.removeAttribute("autoplay");
+    video.pause();
+    playerPreview.classList.remove("is-hidden");
+    updateVolume(readSavedVolume(), false);
+    updatePlayButton();
 
     playPauseBtn.addEventListener("click", () => {
-      if (video.paused) video.play();
+      if (video.paused) startPlayback();
       else video.pause();
     });
 
@@ -547,16 +600,99 @@ function renderPlayer(
     video.addEventListener("loadedmetadata", () => {
       duration.textContent = formatTime(video.duration);
     });
-    video.addEventListener("play", updatePlayButton);
     video.addEventListener("pause", updatePlayButton);
-    video.addEventListener("ended", updatePlayButton);
-
-    wrap.addEventListener("click", (e) => {
-      if (!video.duration) return;
-      const rect = wrap.getBoundingClientRect();
-      const pct = (e.clientX - rect.left) / rect.width;
-      video.currentTime = pct * video.duration;
+    video.addEventListener("play", () => {
+      if (!userRequestedPlay) {
+        video.pause();
+        return;
+      }
+      updatePlayButton();
+      playerPreview.classList.add("is-hidden");
     });
+
+    const isPreviewActive = () =>
+      !playerPreview.classList.contains("is-hidden");
+
+    const videoWrapper = video.closest(".player-video-wrapper");
+    const controlsBar = videoWrapper.querySelector(".video-controls");
+    const syncPreviewBounds = () => {
+      if (getComputedStyle(controlsBar).display === "none") {
+        playerPreview.style.bottom = "0px";
+        return;
+      }
+      const wrapperBottom = videoWrapper.getBoundingClientRect().bottom;
+      const barTop = Math.min(
+        controlsBar.getBoundingClientRect().top,
+        wrap.getBoundingClientRect().top,
+      );
+      playerPreview.style.bottom = `${Math.max(0, wrapperBottom - barTop)}px`;
+    };
+    const scheduleSync = () => requestAnimationFrame(syncPreviewBounds);
+    syncPreviewBounds();
+    new ResizeObserver(scheduleSync).observe(videoWrapper);
+    new ResizeObserver(scheduleSync).observe(controlsBar);
+    document.addEventListener("fullscreenchange", scheduleSync);
+
+    videoWrapper.addEventListener("click", (event) => {
+      if (event.target.closest(".video-controls, .progress-bar-wrap")) return;
+      if (isPreviewActive() || video.paused) startPlayback();
+      else video.pause();
+    });
+
+    window.addEventListener("pageshow", (event) => {
+      if (!event.persisted) return;
+      userRequestedPlay = false;
+      video.pause();
+      playerPreview.classList.remove("is-hidden");
+      updatePlayButton();
+    });
+    video.addEventListener("ended", () => {
+      updatePlayButton();
+      playerPreview.classList.remove("is-hidden");
+    });
+
+    const seekFromPointer = (event) => {
+      if (isPreviewActive()) return;
+      if (!Number.isFinite(video.duration) || video.duration <= 0) return;
+      const rect = wrap.getBoundingClientRect();
+      if (!rect.width) return;
+      const pct = Math.min(
+        1,
+        Math.max(0, (event.clientX - rect.left) / rect.width),
+      );
+      video.currentTime = pct * video.duration;
+    };
+
+    wrap.addEventListener("click", seekFromPointer);
+
+    let scrubbingPointerId = null;
+    wrap.addEventListener("pointerdown", (event) => {
+      if (
+        !event.isPrimary ||
+        (event.pointerType === "mouse" && event.button !== 0)
+      )
+        return;
+      if (isPreviewActive()) return;
+      event.preventDefault();
+      scrubbingPointerId = event.pointerId;
+      wrap.classList.add("is-scrubbing");
+      wrap.setPointerCapture(event.pointerId);
+      seekFromPointer(event);
+    });
+
+    wrap.addEventListener("pointermove", (event) => {
+      if (event.pointerId === scrubbingPointerId) seekFromPointer(event);
+    });
+
+    const stopScrubbing = (event) => {
+      if (event.pointerId !== scrubbingPointerId) return;
+      scrubbingPointerId = null;
+      wrap.classList.remove("is-scrubbing");
+    };
+
+    wrap.addEventListener("pointerup", stopScrubbing);
+    wrap.addEventListener("pointercancel", stopScrubbing);
+    wrap.addEventListener("lostpointercapture", stopScrubbing);
 
     document.addEventListener("keydown", (event) => {
       const target = event.target;
@@ -570,11 +706,11 @@ function renderPlayer(
 
       if (event.code === "Space" || event.code === "KeyK") {
         event.preventDefault();
-        if (video.paused) video.play().catch(() => {});
+        if (video.paused) startPlayback();
         else video.pause();
       } else if (event.code === "ArrowLeft" || event.code === "ArrowRight") {
         event.preventDefault();
-        if (!Number.isFinite(video.duration)) return;
+        if (isPreviewActive() || !Number.isFinite(video.duration)) return;
         const change = event.code === "ArrowLeft" ? -5 : 5;
         video.currentTime = Math.min(
           video.duration,
@@ -587,11 +723,10 @@ function renderPlayer(
         updateVolume(currentVolume + change);
       } else if (event.code === "KeyM") {
         event.preventDefault();
-        video.muted = !video.muted;
-        if (!video.muted && video.volume === 0) {
-          updateVolume(0.2);
+        if (video.muted || video.volume === 0) {
+          updateVolume(lastNonZeroVolume || DEFAULT_VOLUME);
         } else {
-          volumeLevel.textContent = `VOL ${video.muted ? 0 : Math.round(video.volume * 100)}%`;
+          updateVolume(0);
         }
       } else if (event.code === "KeyF") {
         event.preventDefault();
@@ -643,7 +778,7 @@ async function init() {
   if (v) {
     if (v.startsWith("http")) {
       const title = params.get("t") || params.get("n") || "Video";
-      renderPlayer(v, title, null, null, null, null, null);
+      renderPlayer(v, title, null, null, null, null, null, null);
     } else {
       app.innerHTML = `<div class="state-msg">ЗАГРУЗКА...</div>`;
       try {
@@ -662,6 +797,7 @@ async function init() {
             prevEntry,
             nextEntry,
             entry.description,
+            entry.thumbUrl,
           );
         } else {
           app.innerHTML = `<div class="state-msg">ВИДЕО НЕ НАЙДЕНО<br><a href="index.html" style="color:var(--accent-primary);font-size:9px;letter-spacing:2px;">← НАЗАД</a></div>`;

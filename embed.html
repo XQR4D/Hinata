@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/hinata.svg" />
     <link rel="alternate icon" type="image/x-icon" href="assets/hinata.ico" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300..700&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -31,7 +31,7 @@
         height: 100%;
         overflow: hidden;
         background: transparent;
-        font-family: "Dela Gothic One", sans-serif;
+        font-family: "Unbounded", sans-serif;
         color: #fff;
         display: flex;
         align-items: center;
@@ -50,13 +50,32 @@
         position: relative;
       }
 
+      .embed-container:fullscreen {
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        max-height: none;
+      }
+
       .video-wrapper {
         width: 100%;
         height: 100%;
         flex: none;
         position: relative;
+        isolation: isolate;
         background: rgba(0, 0, 0, 0.72);
         overflow: hidden;
+      }
+
+      .embed-container:fullscreen .video-wrapper {
+        height: auto;
+        min-height: 0;
+        flex: 1;
+      }
+
+      .video-wrapper video {
+        position: relative;
+        z-index: 0;
       }
 
       video {
@@ -168,16 +187,16 @@
       }
 
       .progress-bar-wrap {
-        height: 3px;
-        position: relative;
+        height: 40px;
         position: absolute;
         left: 0;
         right: 0;
-        bottom: 42px;
-        background: #1a1a1a;
+        bottom: 34px;
+        background: transparent;
         cursor: pointer;
         flex-shrink: 0;
-        z-index: 25;
+        z-index: 30;
+        touch-action: none;
       }
 
       .controls-hidden .progress-bar-wrap,
@@ -186,65 +205,124 @@
         pointer-events: none;
       }
 
+      .progress-bar-wrap,
+      .video-controls {
+        transition:
+          opacity 0.18s ease,
+          background-color 0.18s ease;
+      }
+
       .progress-bar-fill {
         width: 0%;
-        height: 100%;
+        height: 3px;
+        position: absolute;
+        top: 50%;
         background: var(--accent-primary);
-        transition: width 0.1s linear;
+        transform: translateY(-50%);
+        transition:
+          width 0.1s linear,
+          height 0.15s ease;
+      }
+
+      .progress-bar-wrap::before {
+        position: absolute;
+        top: 50%;
+        right: 0;
+        left: 0;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.35);
+        content: "";
+        transform: translateY(-50%);
+        transition:
+          height 0.15s ease,
+          background-color 0.15s ease;
       }
 
       .progress-bar-dot {
         position: absolute;
         top: 50%;
         left: 0%;
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
         background: var(--accent-primary);
-        border: 2px solid #000;
+        border: 2px solid #080808;
+        border-radius: 50%;
         transform: translate(-50%, -50%);
-        box-shadow: 0 0 0 1px var(--accent-primary);
-        transition: left 0.1s linear;
+        box-shadow: 0 0 0 2px rgba(21, 255, 0, 0.22);
+        transition:
+          left 0.1s linear,
+          width 0.15s ease,
+          height 0.15s ease;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .progress-bar-wrap:hover::before,
+        .progress-bar-wrap.is-scrubbing::before {
+          height: 5px;
+          background: rgba(255, 255, 255, 0.55);
+        }
+
+        .progress-bar-wrap:hover .progress-bar-fill,
+        .progress-bar-wrap.is-scrubbing .progress-bar-fill {
+          height: 5px;
+        }
+
+        .progress-bar-wrap:hover .progress-bar-dot,
+        .progress-bar-wrap.is-scrubbing .progress-bar-dot {
+          width: 14px;
+          height: 14px;
+        }
       }
 
       .video-controls {
-        min-height: 42px;
+        min-height: 48px;
         flex-shrink: 0;
         position: absolute;
         left: 0;
         right: 0;
         bottom: 0;
-        padding: 7px 10px;
+        padding: 8px 12px;
         display: flex;
         align-items: center;
-        gap: 10px;
-        background: #080808;
-        border-top: 1px solid #1a1a1a;
+        gap: 9px;
         z-index: 25;
       }
 
       .video-control-button {
         min-width: 34px;
-        height: 28px;
+        height: 32px;
         padding: 0 8px;
-        background: transparent;
-        border: 1px solid #2a2a2a;
+        background: rgba(255, 255, 255, 0.035);
+        border: 1px solid rgba(220, 255, 225, 0.16);
+        border-radius: 4px;
         color: var(--accent-primary);
-        font-family: "Dela Gothic One", sans-serif;
+        font-family: "Unbounded", sans-serif;
         font-size: 10px;
         cursor: pointer;
+        transition:
+          background-color 0.15s ease,
+          border-color 0.15s ease,
+          transform 0.15s ease;
       }
 
       .video-control-button:hover,
       .video-control-button:focus-visible {
         border-color: var(--accent-primary);
+        background: rgba(21, 255, 0, 0.1);
         outline: none;
+      }
+
+      .video-control-button:active {
+        transform: scale(0.94);
       }
 
       .video-time {
         min-width: 76px;
-        color: #aaa;
+        color: rgba(255, 255, 255, 0.72);
         font-size: 9px;
         letter-spacing: 1px;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
       }
 
       .volume-control {
@@ -252,20 +330,21 @@
         align-items: center;
         gap: 7px;
         margin-left: auto;
-        color: #777;
+        color: rgba(255, 255, 255, 0.55);
         font-size: 8px;
         letter-spacing: 1px;
       }
 
       .volume-control input {
         width: 90px;
-        height: 3px;
+        height: 4px;
         accent-color: var(--accent-primary);
         cursor: pointer;
+        touch-action: none;
       }
 
       .fullscreen-button {
-        min-width: 48px;
+        min-width: 52px;
         font-size: 8px;
         letter-spacing: 1px;
       }
@@ -299,22 +378,79 @@
       }
 
       @media (max-width: 520px) {
+        .embed-container {
+          max-height: none;
+        }
+
+        .embed-container:fullscreen {
+          height: 100dvh;
+        }
+
+        .progress-bar-wrap {
+          height: 44px;
+          bottom: 44px;
+        }
+
         .video-controls {
-          gap: 6px;
-          padding: 6px;
+          min-height: 56px;
+          gap: 7px;
+          padding: 8px 10px;
+        }
+
+        .video-time {
+          min-width: 70px;
+          font-size: 9px;
+        }
+
+        .volume-control input {
+          width: clamp(42px, 16vw, 64px);
+        }
+
+        .video-control-button {
+          min-width: 40px;
+          height: 40px;
+          padding: 0 8px;
+        }
+
+        .fullscreen-button {
+          min-width: 42px;
+        }
+
+        .fullscreen-button span {
+          display: none;
+        }
+
+        .progress-bar-dot {
+          width: 14px;
+          height: 14px;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .video-controls {
+          gap: 5px;
+          padding-right: 7px;
+          padding-left: 7px;
         }
 
         .video-time {
           min-width: 64px;
           font-size: 8px;
+          letter-spacing: 0;
+        }
+
+        .volume-control {
+          gap: 4px;
+          font-size: 7px;
+          letter-spacing: 0;
         }
 
         .volume-control input {
-          width: 58px;
+          width: 38px;
         }
 
         .video-control-button {
-          min-width: 32px;
+          min-width: 36px;
           padding: 0 6px;
         }
       }
@@ -326,6 +462,10 @@
         <video id="v" preload="metadata" playsinline>
           <source id="videoSource" src="" type="video/mp4" />
         </video>
+        <div class="progress-bar-wrap" id="progressWrap">
+          <div class="progress-bar-fill" id="progressFill"></div>
+          <div class="progress-bar-dot" id="progressDot"></div>
+        </div>
         <div class="thumb-overlay" id="thumbOverlay">
           <img id="thumbImg" alt="" />
         </div>
@@ -337,10 +477,6 @@
             >НАЖМИТЕ ДЛЯ ПОВТОРА</span
           >
         </div>
-      </div>
-      <div class="progress-bar-wrap" id="progressWrap">
-        <div class="progress-bar-fill" id="progressFill"></div>
-        <div class="progress-bar-dot" id="progressDot"></div>
       </div>
       <div class="video-controls" aria-label="Управление видео">
         <button
@@ -394,6 +530,24 @@
 
       const GITHUB_USER = "xqr4d";
       const GITHUB_REPO = "Hinata";
+      const VOLUME_KEY = "hinata-volume";
+      const DEFAULT_VOLUME = 0.2;
+
+      function getSavedVolume() {
+        try {
+          const raw = localStorage.getItem(VOLUME_KEY);
+          if (raw === null) return DEFAULT_VOLUME;
+          const n = parseFloat(raw);
+          if (Number.isFinite(n) && n >= 0 && n <= 1) return n;
+        } catch (_) {}
+        return DEFAULT_VOLUME;
+      }
+
+      function saveVolume(value) {
+        try {
+          localStorage.setItem(VOLUME_KEY, String(value));
+        } catch (_) {}
+      }
 
       async function makeId(tag, file) {
         const str = `${tag}|${file}`;
@@ -493,15 +647,23 @@
         playPauseBtn.title = isPlaying ? "Пауза" : "Воспроизвести";
       };
 
+      let lastNonZeroVolume = DEFAULT_VOLUME;
+
       const updateVolume = (value) => {
         const nextVolume = Math.min(1, Math.max(0, value));
         video.volume = nextVolume;
         video.muted = nextVolume === 0;
         volumeControl.value = nextVolume.toString();
         volumeLevel.textContent = `VOL ${Math.round(nextVolume * 100)}%`;
+        saveVolume(nextVolume);
+        if (nextVolume > 0) lastNonZeroVolume = nextVolume;
       };
 
-      updateVolume(Number(volumeControl.value));
+      {
+        const initialVolume = getSavedVolume();
+        if (initialVolume > 0) lastNonZeroVolume = initialVolume;
+        updateVolume(initialVolume);
+      }
 
       playPauseBtn.addEventListener("click", () => {
         if (video.paused) {
@@ -538,12 +700,47 @@
       video.addEventListener("play", updatePlayButton);
       video.addEventListener("pause", updatePlayButton);
 
-      wrap.addEventListener("click", (e) => {
-        if (!video.duration) return;
+      const seekFromPointer = (event) => {
+        if (!Number.isFinite(video.duration) || video.duration <= 0) return;
         const rect = wrap.getBoundingClientRect();
-        video.currentTime =
-          ((e.clientX - rect.left) / rect.width) * video.duration;
+        if (!rect.width) return;
+        const position = Math.min(
+          1,
+          Math.max(0, (event.clientX - rect.left) / rect.width),
+        );
+        video.currentTime = position * video.duration;
+      };
+
+      wrap.addEventListener("click", seekFromPointer);
+
+      let scrubbingPointerId = null;
+
+      wrap.addEventListener("pointerdown", (event) => {
+        if (
+          !event.isPrimary ||
+          (event.pointerType === "mouse" && event.button !== 0)
+        )
+          return;
+        event.preventDefault();
+        scrubbingPointerId = event.pointerId;
+        wrap.classList.add("is-scrubbing");
+        wrap.setPointerCapture(event.pointerId);
+        seekFromPointer(event);
       });
+
+      wrap.addEventListener("pointermove", (event) => {
+        if (event.pointerId === scrubbingPointerId) seekFromPointer(event);
+      });
+
+      const stopScrubbing = (event) => {
+        if (event.pointerId !== scrubbingPointerId) return;
+        scrubbingPointerId = null;
+        wrap.classList.remove("is-scrubbing");
+      };
+
+      wrap.addEventListener("pointerup", stopScrubbing);
+      wrap.addEventListener("pointercancel", stopScrubbing);
+      wrap.addEventListener("lostpointercapture", stopScrubbing);
 
       document.addEventListener("keydown", (event) => {
         const target = event.target;
@@ -569,11 +766,11 @@
           updateVolume(currentVolume + change);
         } else if (event.code === "KeyM") {
           event.preventDefault();
-          video.muted = !video.muted;
-          if (!video.muted && video.volume === 0) {
-            updateVolume(0.2);
+          if (video.muted || video.volume === 0) {
+            updateVolume(lastNonZeroVolume || DEFAULT_VOLUME);
           } else {
-            volumeLevel.textContent = `VOL ${video.muted ? 0 : Math.round(video.volume * 100)}%`;
+            lastNonZeroVolume = video.volume;
+            updateVolume(0);
           }
         } else if (event.code === "KeyF") {
           event.preventDefault();
